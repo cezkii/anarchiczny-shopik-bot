@@ -719,3 +719,4 @@ Z itemami z shopika będziesz mógł podbijać anarchię 🥳
 
 });
 client.login(TOKEN);
+// test
