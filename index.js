@@ -18,12 +18,13 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
+        GatewayIntentBits.MessageContent,
+    ],
 });
 
 const TOKEN = process.env.TOKEN;
 const db = require('./database');
+
 const PANEL_CHANNEL = '1502358629402284234';
 const LEGIT_CHANNEL = '1502356815495692440';
 
@@ -628,6 +629,18 @@ ${reason}
         ephemeral: false
     });
 }
+if (interaction.customId === 'send_legit') {
+
+    const legitChannel =
+        interaction.guild.channels.cache.get(LEGIT_CHANNEL);
+
+    const [buyerId, amount, payment] =
+        interaction.channel.topic.split('|');
+
+    const embed = new EmbedBuilder()
+        .setColor('Green')
+        .setTitle('NOWA LEGITKA')
+        .setDescription(`
 Kupujący:
 <@${buyerId}>
 
@@ -642,16 +655,31 @@ ${payment}
 
 Godzina:
 <t:${Math.floor(Date.now()/1000)}:t>
-                `);
+        `);
 
-            await legitChannel.send({
-                embeds: [embed]
-            });
+    await legitChannel.send({
+        embeds: [embed]
+    });
 
-            await interaction.reply({
-                content: 'Legitka wystawiona.'
-            });
+    await interaction.reply({
+        content: 'Legitka wystawiona.'
+    });
 
+    const category = interaction.channel.parent;
+
+    setTimeout(async () => {
+
+        await interaction.channel.delete()
+            .catch(() => {});
+
+        if (category.children.cache.size <= 1) {
+
+            await category.delete()
+                .catch(() => {});
+        }
+
+    }, 3000);
+}
             const category = interaction.channel.parent;
 
             setTimeout(async () => {
