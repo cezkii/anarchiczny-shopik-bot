@@ -1,3 +1,4 @@
+```js
 const {
     Client,
     GatewayIntentBits,
@@ -18,12 +19,11 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-    ],
+        GatewayIntentBits.MessageContent
+    ]
 });
 
 const TOKEN = process.env.TOKEN;
-const db = require('./database');
 
 const PANEL_CHANNEL = '1502358629402284234';
 const LEGIT_CHANNEL = '1502356815495692440';
@@ -40,8 +40,9 @@ const ROLES = {
 async function getOrCreateCategory(guild, name) {
 
     let category = guild.channels.cache.find(
-        c => c.type === ChannelType.GuildCategory
-        && c.name === name
+        c =>
+            c.type === ChannelType.GuildCategory &&
+            c.name === name
     );
 
     if (!category) {
@@ -53,16 +54,6 @@ async function getOrCreateCategory(guild, name) {
     }
 
     return category;
-}
-
-async function deleteCategoryIfEmpty(category) {
-
-    if (!category) return;
-
-    if (category.children.cache.size <= 0) {
-
-        await category.delete().catch(() => {});
-    }
 }
 
 client.once('ready', async () => {
@@ -104,7 +95,6 @@ client.once('ready', async () => {
         embeds: [embed],
         components: [row]
     });
-
 });
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -120,28 +110,12 @@ client.on(Events.InteractionCreate, async interaction => {
                     .setPlaceholder('Wybierz metodę płatności')
                     .addOptions([
                         {
-                            label: 'BLIK NA NR TEL',
-                            value: 'BLIK NA NR TEL'
+                            label: 'BLIK',
+                            value: 'BLIK'
                         },
                         {
-                            label: 'KOD BLIK',
-                            value: 'KOD BLIK'
-                        },
-                        {
-                            label: 'PSC Z PARAGONEM',
-                            value: 'PSC Z PARAGONEM'
-                        },
-                        {
-                            label: 'PSC BEZ PARAGONU',
-                            value: 'PSC BEZ PARAGONU'
-                        },
-                        {
-                            label: 'MYPSC',
-                            value: 'MYPSC'
-                        },
-                        {
-                            label: 'CS2 SKINS',
-                            value: 'CS2 SKINS'
+                            label: 'PSC',
+                            value: 'PSC'
                         },
                         {
                             label: 'PAYPAL',
@@ -169,19 +143,10 @@ client.on(Events.InteractionCreate, async interaction => {
                     .setCustomId('sell_amount')
                     .setLabel('Ile sprzedajesz?')
                     .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('Np. 500k')
-                    .setRequired(true);
-
-                const payment = new TextInputBuilder()
-                    .setCustomId('sell_payment')
-                    .setLabel('Forma płatności')
-                    .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('PSC')
                     .setRequired(true);
 
                 modal.addComponents(
-                    new ActionRowBuilder().addComponents(amount),
-                    new ActionRowBuilder().addComponents(payment)
+                    new ActionRowBuilder().addComponents(amount)
                 );
 
                 return interaction.showModal(modal);
@@ -195,7 +160,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
                 const reason = new TextInputBuilder()
                     .setCustomId('other_reason')
-                    .setLabel('W jakiej sprawie?')
+                    .setLabel('Powód')
                     .setStyle(TextInputStyle.Paragraph)
                     .setRequired(true);
 
@@ -213,13 +178,12 @@ client.on(Events.InteractionCreate, async interaction => {
 
             const modal = new ModalBuilder()
                 .setCustomId(`buy_${payment}`)
-                .setTitle('ZAKUP WALUTY');
+                .setTitle('ZAKUP');
 
             const amount = new TextInputBuilder()
                 .setCustomId('buy_amount')
-                .setLabel('Za ile chcesz kupić?')
+                .setLabel('Za ile kupujesz?')
                 .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Np. 25')
                 .setRequired(true);
 
             modal.addComponents(
@@ -238,48 +202,18 @@ client.on(Events.InteractionCreate, async interaction => {
                 interaction.customId.replace('buy_', '');
 
             const amount =
-                parseInt(
-                    interaction.fields.getTextInputValue('buy_amount')
-                );
-
-            let categoryName = 'NO LIMIT';
-            let pingRoles = `<@&${ROLES.NOLIMIT}>`;
-
-            if (amount >= 1 && amount <= 50) {
-
-                categoryName = 'LIMIT 50';
-
-                pingRoles =
-`<@&${ROLES.LIMIT50}> <@&${ROLES.NOLIMIT}>`;
-            }
-
-            if (amount >= 51 && amount <= 100) {
-
-                categoryName = 'LIMIT 100';
-
-                pingRoles =
-`<@&${ROLES.LIMIT100}> <@&${ROLES.NOLIMIT}>`;
-            }
-
-            if (amount >= 101 && amount <= 200) {
-
-                categoryName = 'LIMIT 200';
-
-                pingRoles =
-`<@&${ROLES.LIMIT200}> <@&${ROLES.NOLIMIT}>`;
-            }
+                interaction.fields.getTextInputValue('buy_amount');
 
             const category =
                 await getOrCreateCategory(
                     interaction.guild,
-                    categoryName
+                    'ZAKUP'
                 );
 
             const ticket =
                 await interaction.guild.channels.create({
 
-                    name:
-`zakup-${interaction.user.username}`,
+                    name: `zakup-${interaction.user.username}`,
 
                     type: ChannelType.GuildText,
 
@@ -310,34 +244,6 @@ client.on(Events.InteractionCreate, async interaction => {
                             allow: [
                                 PermissionsBitField.Flags.ViewChannel
                             ]
-                        },
-
-                        {
-                            id: ROLES.NOLIMIT,
-                            allow: [
-                                PermissionsBitField.Flags.ViewChannel
-                            ]
-                        },
-
-                        {
-                            id: ROLES.LIMIT50,
-                            allow: [
-                                PermissionsBitField.Flags.ViewChannel
-                            ]
-                        },
-
-                        {
-                            id: ROLES.LIMIT100,
-                            allow: [
-                                PermissionsBitField.Flags.ViewChannel
-                            ]
-                        },
-
-                        {
-                            id: ROLES.LIMIT200,
-                            allow: [
-                                PermissionsBitField.Flags.ViewChannel
-                            ]
                         }
                     ]
                 });
@@ -346,8 +252,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setColor('Green')
                 .setTitle('NOWE ZAMÓWIENIE')
                 .setDescription(`
-Poczekaj na sprzedawcę.
-
 Kupujący:
 ${interaction.user}
 
@@ -363,213 +267,23 @@ ${payment}
 
                     new ButtonBuilder()
                         .setCustomId('take_ticket')
-                        .setLabel('PRZEJMIJ TICKET')
+                        .setLabel('PRZEJMIJ')
                         .setStyle(ButtonStyle.Success),
 
                     new ButtonBuilder()
                         .setCustomId('send_legit')
-                        .setLabel('WYSTAW LEGITKĘ')
-                        .setStyle(ButtonStyle.Success),
+                        .setLabel('LEGITKA')
+                        .setStyle(ButtonStyle.Primary),
 
                     new ButtonBuilder()
                         .setCustomId('close_ticket')
-                        .setLabel('ZAMKNIJ TICKET')
+                        .setLabel('ZAMKNIJ')
                         .setStyle(ButtonStyle.Danger)
                 );
 
             await ticket.send({
-                content: pingRoles,
+                content: `<@&${ROLES.TICKET}>`,
                 embeds: [embed],
-                components: [row]
-            });
-
-            return interaction.reply({
-                content: `Ticket utworzony: ${ticket}`,
-                ephemeral: true
-            });
-        }
-
-        if (interaction.customId === 'sell_modal') {
-
-            const amount =
-                interaction.fields.getTextInputValue('sell_amount');
-
-            const payment =
-                interaction.fields.getTextInputValue('sell_payment');
-
-            const category =
-                await getOrCreateCategory(
-                    interaction.guild,
-                    'SKUP'
-                );
-
-            const ticket =
-                await interaction.guild.channels.create({
-
-                    name:
-`skup-${interaction.user.username}`,
-
-                    type: ChannelType.GuildText,
-
-                    parent: category.id,
-
-                    permissionOverwrites: [
-
-                        {
-                            id: interaction.guild.id,
-                            deny: [
-                                PermissionsBitField.Flags.ViewChannel
-                            ]
-                        },
-
-                        {
-                            id: interaction.user.id,
-                            allow: [
-                                PermissionsBitField.Flags.ViewChannel,
-                                PermissionsBitField.Flags.SendMessages
-                            ]
-                        },
-
-                        {
-                            id: ROLES.TICKET,
-                            allow: [
-                                PermissionsBitField.Flags.ViewChannel
-                            ]
-                        },
-
-                        {
-                            id: ROLES.NOLIMIT,
-                            allow: [
-                                PermissionsBitField.Flags.ViewChannel
-                            ]
-                        }
-                    ]
-                });
-
-            const row = new ActionRowBuilder()
-                .addComponents(
-
-                    new ButtonBuilder()
-                        .setCustomId('take_ticket')
-                        .setLabel('PRZEJMIJ TICKET')
-                        .setStyle(ButtonStyle.Success),
-
-                    new ButtonBuilder()
-                        .setCustomId('close_ticket')
-                        .setLabel('ZAMKNIJ TICKET')
-                        .setStyle(ButtonStyle.Danger)
-                );
-
-            await ticket.send({
-                content:
-`<@&${ROLES.NOLIMIT}>`,
-                embeds: [
-                    new EmbedBuilder()
-                    .setColor('Green')
-                    .setTitle('SKUP')
-                    .setDescription(`
-Sprzedający:
-${interaction.user}
-
-Kwota:
-${amount}
-
-Płatność:
-${payment}
-                    `)
-                ],
-                components: [row]
-            });
-
-            return interaction.reply({
-                content: `Ticket utworzony: ${ticket}`,
-                ephemeral: true
-            });
-        }
-
-        if (interaction.customId === 'other_modal') {
-
-            const reason =
-                interaction.fields.getTextInputValue('other_reason');
-
-            const category =
-                await getOrCreateCategory(
-                    interaction.guild,
-                    'INNE'
-                );
-
-            const ticket =
-                await interaction.guild.channels.create({
-
-                    name:
-`inne-${interaction.user.username}`,
-
-                    type: ChannelType.GuildText,
-
-                    parent: category.id,
-
-                    permissionOverwrites: [
-
-                        {
-                            id: interaction.guild.id,
-                            deny: [
-                                PermissionsBitField.Flags.ViewChannel
-                            ]
-                        },
-
-                        {
-                            id: interaction.user.id,
-                            allow: [
-                                PermissionsBitField.Flags.ViewChannel,
-                                PermissionsBitField.Flags.SendMessages
-                            ]
-                        },
-
-                        {
-                            id: ROLES.HELPER,
-                            allow: [
-                                PermissionsBitField.Flags.ViewChannel
-                            ]
-                        },
-
-                        {
-                            id: ROLES.TICKET,
-                            allow: [
-                                PermissionsBitField.Flags.ViewChannel
-                            ]
-                        }
-                    ]
-                });
-
-            const row = new ActionRowBuilder()
-                .addComponents(
-
-                    new ButtonBuilder()
-                        .setCustomId('take_ticket')
-                        .setLabel('PRZEJMIJ TICKET')
-                        .setStyle(ButtonStyle.Success),
-
-                    new ButtonBuilder()
-                        .setCustomId('close_ticket')
-                        .setLabel('ZAMKNIJ TICKET')
-                        .setStyle(ButtonStyle.Danger)
-                );
-
-            await ticket.send({
-                content:
-`<@&${ROLES.HELPER}>`,
-                embeds: [
-                    new EmbedBuilder()
-                    .setColor('Green')
-                    .setTitle('POMOC')
-                    .setDescription(`
-Użytkownik:
-${interaction.user}
-
-Powód:
-${reason}
-                    `)
-                ],
                 components: [row]
             });
 
@@ -584,63 +298,26 @@ ${reason}
 
         if (interaction.customId === 'take_ticket') {
 
-    const buyerId = interaction.channel.topic.split('|')[0];
-
-    await interaction.channel.permissionOverwrites.set([
-
-        {
-            id: interaction.guild.id,
-            deny: [
-                PermissionsBitField.Flags.ViewChannel
-            ]
-        },
-
-        {
-            id: buyerId,
-            allow: [
-                PermissionsBitField.Flags.ViewChannel,
-                PermissionsBitField.Flags.SendMessages,
-                PermissionsBitField.Flags.ReadMessageHistory
-            ]
-        },
-
-        {
-            id: interaction.user.id,
-            allow: [
-                PermissionsBitField.Flags.ViewChannel,
-                PermissionsBitField.Flags.SendMessages,
-                PermissionsBitField.Flags.ReadMessageHistory
-            ]
-        },
-
-        {
-            id: ROLES.TICKET,
-            allow: [
-                PermissionsBitField.Flags.ViewChannel,
-                PermissionsBitField.Flags.SendMessages,
-                PermissionsBitField.Flags.ReadMessageHistory
-            ]
+            await interaction.reply({
+                content:
+`✅ Ticket przejęty przez ${interaction.user}`
+            });
         }
 
-    ]);
+        if (interaction.customId === 'send_legit') {
 
-    await interaction.reply({
-        content: `✅ Ticket został przejęty przez ${interaction.user}`,
-        ephemeral: false
-    });
-}
-if (interaction.customId === 'send_legit') {
+            const legitChannel =
+                interaction.guild.channels.cache.get(
+                    LEGIT_CHANNEL
+                );
 
-    const legitChannel =
-        interaction.guild.channels.cache.get(LEGIT_CHANNEL);
+            const [buyerId, amount, payment] =
+                interaction.channel.topic.split('|');
 
-    const [buyerId, amount, payment] =
-        interaction.channel.topic.split('|');
-
-    const embed = new EmbedBuilder()
-        .setColor('Green')
-        .setTitle('NOWA LEGITKA')
-        .setDescription(`
+            const embed = new EmbedBuilder()
+                .setColor('Green')
+                .setTitle('NOWA LEGITKA')
+                .setDescription(`
 Kupujący:
 <@${buyerId}>
 
@@ -652,56 +329,21 @@ ${amount}
 
 Metoda:
 ${payment}
+                `);
 
-Godzina:
-<t:${Math.floor(Date.now()/1000)}:t>
-        `);
+            await legitChannel.send({
+                embeds: [embed]
+            });
 
-    await legitChannel.send({
-        embeds: [embed]
-    });
-
-    await interaction.reply({
-        content: 'Legitka wystawiona.'
-    });
-
-    const category = interaction.channel.parent;
-
-    setTimeout(async () => {
-
-        await interaction.channel.delete()
-            .catch(() => {});
-
-        if (category.children.cache.size <= 1) {
-
-            await category.delete()
-                .catch(() => {});
-        }
-
-    }, 3000);
-}
-            const category = interaction.channel.parent;
-
-            setTimeout(async () => {
-
-                await interaction.channel.delete()
-                    .catch(() => {});
-
-                if (category.children.cache.size <= 1) {
-
-                    await category.delete()
-                        .catch(() => {});
-                }
-
-            }, 3000);
+            await interaction.reply({
+                content: 'Legitka wystawiona.'
+            });
         }
 
         if (interaction.customId === 'close_ticket') {
 
-            const category = interaction.channel.parent;
-
             await interaction.reply({
-                content: 'Zamykanie ticketu...'
+                content: 'Usuwam ticket...'
             });
 
             setTimeout(async () => {
@@ -709,40 +351,10 @@ Godzina:
                 await interaction.channel.delete()
                     .catch(() => {});
 
-                if (category.children.cache.size <= 1) {
-
-                    await category.delete()
-                        .catch(() => {});
-                }
-
             }, 3000);
         }
     }
 });
-client.on('guildMemberAdd', async member => {
 
-    const channel =
-        member.guild.channels.cache.get(
-            '1502652604973318376'
-        );
-
-    if (!channel) return;
-
-    const embed = new EmbedBuilder()
-        .setColor('#1e2a38')
-        .setTitle('🎉 NOWY UŻYTKOWNIK')
-        .setDescription(`
-${member}
-
-Cieszymy się że dołączasz na naszego shopa 🔥
-
-Z itemami z shopika będziesz mógł podbijać anarchię 🥳
-        `)
-        .setTimestamp();
-
-    channel.send({
-        embeds: [embed]
-    });
-
-});
 client.login(TOKEN);
+```
