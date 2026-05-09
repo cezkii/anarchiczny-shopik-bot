@@ -15,6 +15,7 @@ const {
 } = require('discord.js');
 
 const client = new Client({
+const db = require('./database');
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
@@ -583,25 +584,51 @@ ${reason}
 
         if (interaction.customId === 'take_ticket') {
 
-            await interaction.reply({
-                content:
-`Ticket przejęty przez ${interaction.user}`,
-                ephemeral: true
-            });
+    const buyerId = interaction.channel.topic.split('|')[0];
+
+    await interaction.channel.permissionOverwrites.set([
+
+        {
+            id: interaction.guild.id,
+            deny: [
+                PermissionsBitField.Flags.ViewChannel
+            ]
+        },
+
+        {
+            id: buyerId,
+            allow: [
+                PermissionsBitField.Flags.ViewChannel,
+                PermissionsBitField.Flags.SendMessages,
+                PermissionsBitField.Flags.ReadMessageHistory
+            ]
+        },
+
+        {
+            id: interaction.user.id,
+            allow: [
+                PermissionsBitField.Flags.ViewChannel,
+                PermissionsBitField.Flags.SendMessages,
+                PermissionsBitField.Flags.ReadMessageHistory
+            ]
+        },
+
+        {
+            id: ROLES.TICKET,
+            allow: [
+                PermissionsBitField.Flags.ViewChannel,
+                PermissionsBitField.Flags.SendMessages,
+                PermissionsBitField.Flags.ReadMessageHistory
+            ]
         }
 
-        if (interaction.customId === 'send_legit') {
+    ]);
 
-            const legitChannel =
-                await client.channels.fetch(LEGIT_CHANNEL);
-
-            const [buyerId, amount, payment] =
-                interaction.channel.topic.split('|');
-
-            const embed = new EmbedBuilder()
-                .setColor('Green')
-                .setTitle('NOWA TRANSAKCJA')
-                .setDescription(`
+    await interaction.reply({
+        content: `✅ Ticket został przejęty przez ${interaction.user}`,
+        ephemeral: false
+    });
+}
 Kupujący:
 <@${buyerId}>
 
@@ -665,5 +692,30 @@ Godzina:
         }
     }
 });
+client.on('guildMemberAdd', async member => {
 
+    const channel =
+        member.guild.channels.cache.get(
+            '1502652604973318376'
+        );
+
+    if (!channel) return;
+
+    const embed = new EmbedBuilder()
+        .setColor('#1e2a38')
+        .setTitle('🎉 NOWY UŻYTKOWNIK')
+        .setDescription(`
+${member}
+
+Cieszymy się że dołączasz na naszego shopa 🔥
+
+Z itemami z shopika będziesz mógł podbijać anarchię 🥳
+        `)
+        .setTimestamp();
+
+    channel.send({
+        embeds: [embed]
+    });
+
+});
 client.login(TOKEN);
