@@ -22,7 +22,7 @@ const client = new Client({
     ]
 });
 
-const TOKEN = 'TWOJ_TOKEN';
+const TOKEN = process.env.TOKEN;
 
 const PANEL_CHANNEL = '1502358629402284234';
 const LEGIT_CHANNEL = '1502356815495692440';
