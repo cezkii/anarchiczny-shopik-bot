@@ -15,7 +15,6 @@ const {
 } = require('discord.js');
 
 const client = new Client({
-const db = require('./database');
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
@@ -24,7 +23,7 @@ const db = require('./database');
 });
 
 const TOKEN = process.env.TOKEN;
-
+const db = require('./database');
 const PANEL_CHANNEL = '1502358629402284234';
 const LEGIT_CHANNEL = '1502356815495692440';
 
