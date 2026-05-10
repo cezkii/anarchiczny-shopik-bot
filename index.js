@@ -850,11 +850,28 @@ content:
 
 setTimeout(async () => {
 
+const parent = interaction.channel.parent;
+
 await interaction.channel.delete()
 .catch(() => {});
 
-}, 3000);
+if (parent) {
 
+const channelsLeft =
+parent.children.cache.filter(
+c => c.id !== interaction.channel.id
+);
+
+if (channelsLeft.size === 0) {
+
+await parent.delete()
+.catch(() => {});
+
+}
+
+}
+
+}, 3000);
 }
 
 if (
