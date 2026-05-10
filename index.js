@@ -638,14 +638,136 @@ embeds: [embed],
 components: [buttons]
 });
 
+if (
+interaction.customId ===
+"other_modal"
+) {
+
+const reason =
+interaction.fields.getTextInputValue(
+"reason"
+);
+
+const category =
+await getCategory(
+interaction.guild,
+"INNE"
+);
+
+const channel =
+await interaction.guild.channels.create({
+
+name:
+`inne-${interaction.user.username}`,
+
+type:
+ChannelType.GuildText,
+
+parent:
+category.id,
+
+permissionOverwrites: [
+
+{
+id:
+interaction.guild.id,
+
+deny: [
+PermissionsBitField.Flags.ViewChannel
+]
+},
+
+{
+id:
+interaction.user.id,
+
+allow: [
+PermissionsBitField.Flags.ViewChannel,
+PermissionsBitField.Flags.SendMessages
+]
+},
+
+{
+id:
+ROLES.HELPER,
+
+allow: [
+PermissionsBitField.Flags.ViewChannel,
+PermissionsBitField.Flags.SendMessages
+]
+}
+
+]
+
+});
+
+db.tickets[channel.id] = {
+owner: interaction.user.id
+};
+
+saveDB();
+
+const embed =
+new EmbedBuilder()
+
+.setColor("Blue")
+
+.setTitle("NOWA POMOC")
+
+.setDescription(`
+
+👤 Użytkownik:
+${interaction.user}
+
+📌 Problem:
+${reason}
+
+`);
+
+const buttons =
+new ActionRowBuilder()
+
+.addComponents(
+
+new ButtonBuilder()
+
+.setCustomId("claim_ticket")
+
+.setLabel("PRZEJMIJ")
+
+.setStyle(ButtonStyle.Success),
+
+new ButtonBuilder()
+
+.setCustomId("close_ticket")
+
+.setLabel("ZAMKNIJ")
+
+.setStyle(ButtonStyle.Danger)
+
+);
+
+await channel.send({
+
+content:
+`<@&${ROLES.HELPER}> ${interaction.user}`,
+
+embeds: [embed],
+
+components: [buttons]
+
+});
+
 return interaction.reply({
+
 content:
 `✅ Ticket utworzony ${channel}`,
+
 ephemeral: true
+
 });
 
 }
-
 if (
 interaction.customId ===
 "sell_modal"
