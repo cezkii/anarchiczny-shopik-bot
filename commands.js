@@ -6,7 +6,6 @@ EmbedBuilder,
 ActionRowBuilder,
 ButtonBuilder,
 ButtonStyle,
-PermissionsBitField,
 Events
 } = require("discord.js");
 
@@ -20,33 +19,169 @@ const INVITE_CHANNEL = "1502650236324024421";
 
 const HELPER_ROLE = "1502601578400579604";
 
+let invitesDB = {};
+let giveaways = {};
+
+
+
+
+
+/* =========================
+   INVITES CACHE
+========================= */
+
+client.on(
+Events.ClientReady,
+async () => {
+
+const guild =
+await client.guilds.fetch(GUILD_ID);
+
+const invites =
+await guild.invites.fetch();
+
+invites.forEach(invite => {
+
+invitesDB[invite.code] = {
+uses: invite.uses,
+inviter: invite.inviter.id
+};
+
+});
+
+console.log("✅ Invites załadowane");
+
+});
+
+
+
+
+
+/* =========================
+   JOIN
+========================= */
+
+client.on(
+Events.GuildMemberAdd,
+async member => {
+
+const invites =
+await member.guild.invites.fetch();
+
+let usedInvite = null;
+
+invites.forEach(invite => {
+
+const old =
+invitesDB[invite.code];
+
+if (
+old &&
+invite.uses > old.uses
+) {
+
+usedInvite = invite;
+
+}
+
+invitesDB[invite.code] = {
+uses: invite.uses,
+inviter: invite.inviter.id
+};
+
+});
+
+if (!usedInvite) return;
+
+const inviterId =
+usedInvite.inviter.id;
+
+if (!invitesDB[inviterId]) {
+
+invitesDB[inviterId] = {
+joins: 0,
+leaves: 0
+};
+
+}
+
+invitesDB[inviterId].joins++;
+
+});
+
+
+
+
+
+/* =========================
+   LEAVE
+========================= */
+
+client.on(
+Events.GuildMemberRemove,
+async member => {
+
+const inviterId =
+member.inviterId;
+
+if (!inviterId) return;
+
+if (!invitesDB[inviterId]) {
+
+invitesDB[inviterId] = {
+joins: 0,
+leaves: 0
+};
+
+}
+
+invitesDB[inviterId].leaves++;
+
+});
+
+
+
+
+
+/* =========================
+   REJESTRACJA KOMEND
+========================= */
+
 const commands = [
 
 new SlashCommandBuilder()
+
 .setName("zapro")
-.setDescription("Sprawdź zaproszenia"),
+
+.setDescription("Pokazuje zaproszenia"),
 
 new SlashCommandBuilder()
+
 .setName("konkurs")
-.setDescription("Stwórz konkurs")
+
+.setDescription("Tworzy konkurs")
+
 .addStringOption(option =>
 option
 .setName("nagroda")
 .setDescription("Nagroda")
 .setRequired(true)
 )
+
 .addStringOption(option =>
 option
 .setName("czas")
-.setDescription("Np 1h")
+.setDescription("Np 2h")
 .setRequired(true)
 )
+
 .addIntegerOption(option =>
 option
 .setName("wygrani")
 .setDescription("Ilość wygranych")
 .setRequired(true)
 )
+
 .addStringOption(option =>
 option
 .setName("wymagania")
@@ -54,7 +189,7 @@ option
 .setRequired(true)
 )
 
-];
+].map(cmd => cmd.toJSON());
 
 const rest = new REST({
 version: "10"
@@ -70,7 +205,15 @@ body: commands
 }
 );
 
-console.log("Komendy gotowe");
+console.log("✅ Komendy gotowe");
+
+
+
+
+
+/* =========================
+   INTERACTION
+========================= */
 
 client.on(
 Events.InteractionCreate,
@@ -97,7 +240,7 @@ interaction.channel.id !== INVITE_CHANNEL
 return interaction.reply({
 
 content:
-`❌ Komenda działa tylko na <#${INVITE_CHANNEL}>`,
+`❌ Użyj na <#${INVITE_CHANNEL}>`,
 
 ephemeral: true
 
@@ -105,27 +248,44 @@ ephemeral: true
 
 }
 
-const invited =
-interaction.member.joinedTimestamp
-? Math.floor(Math.random() * 20)
-: 0;
+const data =
+invitesDB[interaction.user.id] || {
+joins: 0,
+leaves: 0
+};
 
 const embed =
 new EmbedBuilder()
 
 .setColor("Blue")
 
-.setTitle("📨 ZAPROSZENIA")
+.setTitle("📨 STATYSTYKI ZAPROSZEŃ")
 
-.setDescription(`
+.addFields(
 
-👤 Użytkownik:
-${interaction.user}
+{
+name: "✅ Dołączyło",
+value: `${data.joins}`,
+inline: true
+},
 
-📈 Ilość zaproszeń:
-${invited}
+{
+name: "❌ Wyszło",
+value: `${data.leaves}`,
+inline: true
+},
 
-`);
+{
+name: "📈 Aktywne",
+value: `${data.joins - data.leaves}`,
+inline: true
+}
+
+)
+
+.setFooter({
+text: interaction.user.username
+});
 
 return interaction.reply({
 embeds: [embed]
@@ -152,7 +312,7 @@ interaction.channel.id !== GIVEAWAY_CHANNEL
 return interaction.reply({
 
 content:
-`❌ Konkursy można robić tylko na <#${GIVEAWAY_CHANNEL}>`,
+"❌ Zły kanał",
 
 ephemeral: true
 
@@ -169,7 +329,7 @@ HELPER_ROLE
 return interaction.reply({
 
 content:
-"❌ Nie masz permisji",
+"❌ Brak permisji",
 
 ephemeral: true
 
@@ -197,6 +357,59 @@ interaction.options.getString(
 "wymagania"
 );
 
+let duration = 0;
+
+if (czas.endsWith("h")) {
+
+duration =
+parseInt(czas) * 3600000;
+
+}
+
+if (czas.endsWith("m")) {
+
+duration =
+parseInt(czas) * 60000;
+
+}
+
+const endTime =
+Date.now() + duration;
+
+const embed =
+new EmbedBuilder()
+
+.setColor("Purple")
+
+.setTitle("🎉 NOWY KONKURS")
+
+.addFields(
+
+{
+name: "🏆 Nagroda",
+value: nagroda,
+inline: true
+},
+
+{
+name: "👥 Wygrani",
+value: `${wygrani}`,
+inline: true
+},
+
+{
+name: "⏰ Kończy się",
+value: `<t:${Math.floor(endTime / 1000)}:R>`,
+inline: true
+},
+
+{
+name: "📋 Wymagania",
+value: wymagania
+}
+
+);
+
 const row =
 new ActionRowBuilder()
 
@@ -212,29 +425,7 @@ new ButtonBuilder()
 
 );
 
-const embed =
-new EmbedBuilder()
-
-.setColor("Purple")
-
-.setTitle("🎉 NOWY KONKURS")
-
-.setDescription(`
-
-🏆 Nagroda:
-${nagroda}
-
-👥 Wygrani:
-${wygrani}
-
-⏰ Czas:
-${czas}
-
-📋 Wymagania:
-${wymagania}
-
-`);
-
+const msg =
 await interaction.channel.send({
 
 embeds: [embed],
@@ -242,6 +433,54 @@ embeds: [embed],
 components: [row]
 
 });
+
+giveaways[msg.id] = {
+users: [],
+winners: wygrani,
+prize: nagroda
+};
+
+setTimeout(async () => {
+
+const giveaway =
+giveaways[msg.id];
+
+if (!giveaway) return;
+
+if (
+giveaway.users.length === 0
+) {
+
+await interaction.channel.send(
+"❌ Nikt nie wziął udziału"
+);
+
+return;
+
+}
+
+const shuffled =
+giveaway.users.sort(
+() => 0.5 - Math.random()
+);
+
+const winners =
+shuffled.slice(0, wygrani);
+
+await interaction.channel.send(`
+
+🎉 Gratulacje ${winners.map(id => `<@${id}>`).join(", ")}
+
+Wygraliście:
+**${nagroda}**
+
+🎫 Zgłoś się na ticket INNE
+
+`);
+
+delete giveaways[msg.id];
+
+}, duration);
 
 return interaction.reply({
 
@@ -254,8 +493,15 @@ ephemeral: true
 
 }
 
-}
-);
+});
+
+
+
+
+
+/* =========================
+   BUTTONS
+========================= */
 
 client.on(
 Events.InteractionCreate,
@@ -268,10 +514,56 @@ interaction.customId ===
 "giveaway_join"
 ) {
 
+const giveaway =
+giveaways[
+interaction.message.id
+];
+
+if (!giveaway) {
+
 return interaction.reply({
 
 content:
-"🎉 Dołączyłeś do konkursu",
+"❌ Konkurs zakończony",
+
+ephemeral: true
+
+});
+
+}
+
+const already =
+giveaway.users.includes(
+interaction.user.id
+);
+
+if (already) {
+
+giveaway.users =
+giveaway.users.filter(
+id =>
+id !== interaction.user.id
+);
+
+return interaction.reply({
+
+content:
+"❌ Opuściłeś konkurs",
+
+ephemeral: true
+
+});
+
+}
+
+giveaway.users.push(
+interaction.user.id
+);
+
+return interaction.reply({
+
+content:
+"✅ Dołączyłeś do konkursu",
 
 ephemeral: true
 
