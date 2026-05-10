@@ -996,4 +996,8 @@ ephemeral: true
 
 });
 
+(async () => {
+await require("./commands")(client, TOKEN);
+})();
+
 client.login(TOKEN);
