@@ -345,7 +345,7 @@ interaction.options.getString(
 const czas =
 interaction.options.getString(
 "czas"
-);
+).toLowerCase();
 
 const wygrani =
 interaction.options.getInteger(
@@ -359,6 +359,14 @@ interaction.options.getString(
 
 let duration = 0;
 
+
+
+
+
+/* =========================
+   CZAS
+========================= */
+
 if (czas.endsWith("h")) {
 
 duration =
@@ -366,10 +374,46 @@ parseInt(czas) * 3600000;
 
 }
 
-if (czas.endsWith("m")) {
+else if (czas.endsWith("d")) {
+
+duration =
+parseInt(czas) * 86400000;
+
+}
+
+else if (czas.endsWith("min")) {
 
 duration =
 parseInt(czas) * 60000;
+
+}
+
+else {
+
+return interaction.reply({
+
+content:
+"❌ Format czasu: 1h / 1d / 1min",
+
+ephemeral: true
+
+});
+
+}
+
+if (
+isNaN(duration) ||
+duration <= 0
+) {
+
+return interaction.reply({
+
+content:
+"❌ Niepoprawny czas",
+
+ephemeral: true
+
+});
 
 }
 
@@ -408,7 +452,11 @@ name: "📋 Wymagania",
 value: wymagania
 }
 
-);
+)
+
+.setFooter({
+text: "Kliknij przycisk poniżej aby wziąć udział"
+});
 
 const row =
 new ActionRowBuilder()
@@ -455,6 +503,8 @@ await interaction.channel.send(
 "❌ Nikt nie wziął udziału"
 );
 
+delete giveaways[msg.id];
+
 return;
 
 }
@@ -471,7 +521,7 @@ await interaction.channel.send(`
 
 🎉 Gratulacje ${winners.map(id => `<@${id}>`).join(", ")}
 
-Wygraliście:
+🏆 Wygraliście:
 **${nagroda}**
 
 🎫 Zgłoś się na ticket INNE
@@ -492,7 +542,6 @@ ephemeral: true
 });
 
 }
-
 });
 
 
