@@ -1354,6 +1354,8 @@ ephemeral: true
 
 });
 
+});
+
 client.on(
 Events.GuildMemberAdd,
 async member => {
@@ -1369,9 +1371,7 @@ embeds: [
 
 new EmbedBuilder()
 .setColor("#1e2a38")
-.setTitle(
-"WITAMY"
-)
+.setTitle("WITAMY")
 .setDescription(`
 ${member}
 Witaj na shopie
