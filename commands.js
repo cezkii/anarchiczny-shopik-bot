@@ -26,30 +26,41 @@ let giveaways = {};
 
 
 
+
+client.on(
+let inviteUses = {};
+let inviteData = {};
+
+
+
+
+
 /* =========================
    INVITES CACHE
 ========================= */
 
-client.on(
+client.once(
 Events.ClientReady,
 async () => {
 
 const guild =
-await client.guilds.fetch(GUILD_ID);
+await client.guilds.fetch(
+GUILD_ID
+);
 
 const invites =
 await guild.invites.fetch();
 
 invites.forEach(invite => {
 
-invitesDB[invite.code] = {
-uses: invite.uses,
-inviter: invite.inviter.id
-};
+inviteUses[invite.code] =
+invite.uses;
 
 });
 
-console.log("✅ Invites załadowane");
+console.log(
+"✅ Invite cache gotowy"
+);
 
 });
 
@@ -65,47 +76,51 @@ client.on(
 Events.GuildMemberAdd,
 async member => {
 
-const invites =
+const newInvites =
 await member.guild.invites.fetch();
 
-let usedInvite = null;
+let inviter = null;
 
-invites.forEach(invite => {
+newInvites.forEach(invite => {
 
-const old =
-invitesDB[invite.code];
+const oldUses =
+inviteUses[invite.code] || 0;
 
 if (
-old &&
-invite.uses > old.uses
+invite.uses > oldUses
 ) {
 
-usedInvite = invite;
+inviter =
+invite.inviter;
 
 }
 
-invitesDB[invite.code] = {
-uses: invite.uses,
-inviter: invite.inviter.id
-};
+inviteUses[invite.code] =
+invite.uses;
 
 });
 
-if (!usedInvite) return;
+if (!inviter) return;
 
-const inviterId =
-usedInvite.inviter.id;
+if (
+!inviteData[inviter.id]
+) {
 
-if (!invitesDB[inviterId]) {
+inviteData[inviter.id] = {
 
-invitesDB[inviterId] = {
 joins: 0,
-leaves: 0
+leaves: 0,
+invited: {}
+
 };
 
 }
 
-invitesDB[inviterId].joins++;
+inviteData[inviter.id]
+.joins++;
+
+inviteData[inviter.id]
+.invited[member.id] = true;
 
 });
 
@@ -121,24 +136,26 @@ client.on(
 Events.GuildMemberRemove,
 async member => {
 
-const inviterId =
-member.inviterId;
+for (const inviterId in inviteData) {
 
-if (!inviterId) return;
+if (
+inviteData[inviterId]
+.invited[member.id]
+) {
 
-if (!invitesDB[inviterId]) {
+inviteData[inviterId]
+.leaves++;
 
-invitesDB[inviterId] = {
-joins: 0,
-leaves: 0
-};
+delete inviteData[inviterId]
+.invited[member.id];
+
+break;
 
 }
 
-invitesDB[inviterId].leaves++;
+}
 
 });
-
 
 
 
@@ -249,11 +266,10 @@ ephemeral: true
 }
 
 const data =
-invitesDB[interaction.user.id] || {
+inviteData[interaction.user.id] || {
 joins: 0,
 leaves: 0
 };
-
 const embed =
 new EmbedBuilder()
 
