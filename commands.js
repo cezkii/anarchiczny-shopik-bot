@@ -517,17 +517,35 @@ giveaway.users.sort(
 const winners =
 shuffled.slice(0, wygrani);
 
-await interaction.channel.send(`
+const winnersText =
+winners.map(id => `<@${id}>`).join(", ");
 
-🎉 Gratulacje ${winners.map(id => `<@${id}>`).join(", ")}
+const message =
+wygrani === 1
 
-🏆 Wygraliście:
+? `
+
+🎉 Gratulacje ${winnersText}
+
+🏆 Wygrałeś:
 **${nagroda}**
 
 🎫 Zgłoś się na ticket INNE
 
-`);
+`
 
+: `
+
+🎉 Gratulacje ${winnersText}
+
+🏆 Wygraliście:
+**${nagroda}**
+
+🎫 Zgłoście się na ticket INNE
+
+`;
+
+await interaction.channel.send(message);
 delete giveaways[msg.id];
 
 }, duration);
