@@ -1,7 +1,5 @@
 const {
 SlashCommandBuilder,
-REST,
-Routes,
 EmbedBuilder,
 ActionRowBuilder,
 ButtonBuilder,
@@ -9,7 +7,12 @@ ButtonStyle,
 Events
 } = require("discord.js");
 
-module.exports = async (client, TOKEN) => {
+const giveaways = {};
+
+let inviteUses = {};
+let inviteData = {};
+
+module.exports = (client) => {
 
 const CLIENT_ID = "1502359226532499659";
 const GUILD_ID = "1502353179722121377";
