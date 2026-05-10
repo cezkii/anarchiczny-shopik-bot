@@ -1,4 +1,3 @@
-
 const {
 Client,
 GatewayIntentBits,
@@ -12,8 +11,7 @@ PermissionsBitField,
 Events,
 ModalBuilder,
 TextInputBuilder,
-TextInputStyle,
-SlashCommandBuilder
+TextInputStyle
 } = require("discord.js");
 
 const fs = require("fs");
@@ -56,8 +54,8 @@ CLIENT500: "1502665546922197042"
 
 let db = {
 users: {},
-drops: {},
-tickets: {}
+tickets: {},
+cooldowns: {}
 };
 
 if (fs.existsSync("./database.json")) {
@@ -90,7 +88,7 @@ if (!category) {
 
 category =
 await guild.channels.create({
-name: name,
+name,
 type: ChannelType.GuildCategory
 });
 
@@ -109,27 +107,13 @@ await client.channels.fetch(
 CHANNELS.TICKETS
 );
 
-const messages =
-await ticketChannel.messages.fetch({
-limit: 20
-});
-
-const already =
-messages.find(
-m =>
-m.author.id === client.user.id &&
-m.components.length
-);
-
-if (!already) {
-
-const embed =
+const ticketEmbed =
 new EmbedBuilder()
 .setColor("#1e2a38")
 .setTitle("ANARCHICZNY SHOPIK - TICKETY")
 .setDescription("Wybierz temat ticketu");
 
-const menu =
+const ticketMenu =
 new StringSelectMenuBuilder()
 .setCustomId("ticket_select")
 .setPlaceholder("Wybierz temat")
@@ -151,223 +135,210 @@ emoji: "🆘"
 }
 ]);
 
-const row =
-new ActionRowBuilder()
-.addComponents(menu);
-
 await ticketChannel.send({
-embeds: [embed],
-components: [row]
+embeds: [ticketEmbed],
+components: [
+new ActionRowBuilder().addComponents(ticketMenu)
+]
 });
-
-}
-
-});
-
-client.once("clientReady", async () => {
 
 const paymentChannel =
 await client.channels.fetch(
 CHANNELS.PAYMENTS
 );
 
-const paymentMessages =
-await paymentChannel.messages.fetch({
-limit: 20
-});
-
-const paymentExists =
-paymentMessages.find(
-m =>
-m.author.id === client.user.id &&
-m.embeds.length
-);
-
-if (!paymentExists) {
-
-const embed =
+const paymentEmbed =
 new EmbedBuilder()
 .setColor("#1e2a38")
-.setTitle("💳 METODY PŁATNOŚCI ANARCHICZNEGO SHOPIKA 💳")
+.setTitle("💳 METODY PŁATNOŚCI")
 .setDescription(`
 🧾 PSC Z PARAGONEM ➜ 15%
-
 🔐 PSC BEZ PARAGONU ➜ 20%
-
 🔐 MYPSC ➜ 25%
-
 📲 BLIK NA NR TEL ➜ 0%
-
 🔢 KOD BLIK ➜ 10%
-
 🔫 CS2 SKINS ➜ 40%
-
 🅿️ PAYPAL ➜ 12%
 `);
 
 await paymentChannel.send({
-embeds: [embed]
+embeds: [paymentEmbed]
 });
 
-}
-
-const clientPanel =
+const clientChannel =
 await client.channels.fetch(
 CHANNELS.CLIENT_PANEL
 );
 
-const clientMessages =
-await clientPanel.messages.fetch({
-limit: 20
-});
-
-const panelExists =
-clientMessages.find(
-m =>
-m.author.id === client.user.id &&
-m.components.length
-);
-
-if (!panelExists) {
-
-const embed =
+const clientEmbed =
 new EmbedBuilder()
 .setColor("#1e2a38")
 .setTitle("PANEL KLIENTA")
-.setDescription(`
-Kliknij przycisk poniżej aby sprawdzić swoje wydatki na shopie.
-`);
-
-const row =
-new ActionRowBuilder()
-.addComponents(
-
-new ButtonBuilder()
-.setCustomId("client_stats")
-.setLabel("SPRAWDŹ SWOJE WYDATKI")
-.setStyle(ButtonStyle.Primary)
-
+.setDescription(
+"Kliknij przycisk poniżej aby sprawdzić wydatki"
 );
 
-await clientPanel.send({
-embeds: [embed],
-components: [row]
+const clientButton =
+new ButtonBuilder()
+.setCustomId("client_stats")
+.setLabel("SPRAWDŹ WYDATKI")
+.setStyle(ButtonStyle.Primary);
+
+await clientChannel.send({
+embeds: [clientEmbed],
+components: [
+new ActionRowBuilder().addComponents(clientButton)
+]
 });
-
-}
-
 const dropChannel =
 await client.channels.fetch(
 CHANNELS.DROP
 );
 
-const dropMessages =
-await dropChannel.messages.fetch({
-limit: 20
-});
-
-const dropExists =
-dropMessages.find(
-m =>
-m.author.id === client.user.id &&
-m.components.length
+const dropEmbed =
+new EmbedBuilder()
+.setColor("#1e2a38")
+.setTitle("DROP SHOPIKA")
+.setDescription(
+"Kliknij przycisk poniżej aby losować nagrodę"
 );
 
-if (!dropExists) {
+const dropButton =
+new ButtonBuilder()
+.setCustomId("drop_button")
+.setLabel("LOSUJ DROP")
+.setStyle(ButtonStyle.Success);
+
+await dropChannel.send({
+embeds: [dropEmbed],
+components: [
+new ActionRowBuilder().addComponents(dropButton)
+]
+});
+
+});
+
+client.on(
+Events.GuildMemberAdd,
+async member => {
+
+const channel =
+await client.channels.fetch(
+CHANNELS.WELCOME
+);
 
 const embed =
 new EmbedBuilder()
 .setColor("#1e2a38")
-.setTitle("DROP SHOPIKA")
+.setTitle("WITAMY")
 .setDescription(`
-Kliknij przycisk poniżej aby wylosować nagrodę.
+${member}
+
+Cieszymy się że dołączasz 🥳
 `);
 
-const row =
-new ActionRowBuilder()
-.addComponents(
-
-new ButtonBuilder()
-.setCustomId("drop_button")
-.setLabel("LOSUJ DROP")
-.setStyle(ButtonStyle.Success)
-
-);
-
-await dropChannel.send({
-embeds: [embed],
-components: [row]
+await channel.send({
+embeds: [embed]
 });
 
 }
+);
 
-});
-client.on(Events.InteractionCreate, async interaction => {
+client.on(
+Events.InteractionCreate,
+async interaction => {
 
-if (interaction.isStringSelectMenu()) {
+if (
+interaction.isStringSelectMenu()
+) {
 
-if (interaction.customId === "ticket_select") {
+if (
+interaction.customId ===
+"ticket_select"
+) {
 
 const already =
-Object.values(db.tickets).find(
-t => t.owner === interaction.user.id
+Object.values(db.tickets)
+.find(
+t =>
+t.owner === interaction.user.id
 );
 
 if (already) {
 
 return interaction.reply({
-content: "❌ Masz już otwarty ticket.",
+content:
+"❌ Masz już ticket",
 ephemeral: true
 });
 
 }
 
-const value = interaction.values[0];
+const value =
+interaction.values[0];
 
 if (value === "buy") {
 
 const menu =
 new StringSelectMenuBuilder()
-.setCustomId("payment_select")
-.setPlaceholder("Wybierz metodę płatności")
+.setCustomId(
+"payment_select"
+)
+.setPlaceholder(
+"Wybierz metodę"
+)
 .addOptions([
 {
-label: "BLIK NA NR TEL",
-value: "BLIK NA NR TEL"
+label:
+"BLIK NA NR TEL",
+value:
+"BLIK NA NR TEL"
 },
 {
-label: "KOD BLIK",
-value: "KOD BLIK"
+label:
+"KOD BLIK",
+value:
+"KOD BLIK"
 },
 {
-label: "PSC Z PARAGONEM",
-value: "PSC Z PARAGONEM"
+label:
+"PSC Z PARAGONEM",
+value:
+"PSC Z PARAGONEM"
 },
 {
-label: "PSC BEZ PARAGONU",
-value: "PSC BEZ PARAGONU"
+label:
+"PSC BEZ PARAGONU",
+value:
+"PSC BEZ PARAGONU"
 },
 {
-label: "MYPSC",
-value: "MYPSC"
+label:
+"MYPSC",
+value:
+"MYPSC"
 },
 {
-label: "CS2 SKINS",
-value: "CS2 SKINS"
+label:
+"CS2 SKINS",
+value:
+"CS2 SKINS"
 },
 {
-label: "PAYPAL",
-value: "PAYPAL"
+label:
+"PAYPAL",
+value:
+"PAYPAL"
 }
 ]);
 
-const row =
-new ActionRowBuilder()
-.addComponents(menu);
-
 return interaction.reply({
-content: "Wybierz metodę płatności",
-components: [row],
+content:
+"Wybierz metodę płatności",
+components: [
+new ActionRowBuilder()
+.addComponents(menu)
+],
 ephemeral: true
 });
 
@@ -382,28 +353,32 @@ new ModalBuilder()
 
 const amount =
 new TextInputBuilder()
-.setCustomId("sell_amount")
-.setLabel("Ile sprzedajesz?")
-.setStyle(TextInputStyle.Short)
-.setRequired(true);
+.setCustomId("amount")
+.setLabel("Kwota")
+.setStyle(
+TextInputStyle.Short
+);
 
 const payment =
 new TextInputBuilder()
-.setCustomId("sell_payment")
+.setCustomId("payment")
 .setLabel("Forma płatności")
-.setPlaceholder("Np. PSC")
-.setStyle(TextInputStyle.Short)
-.setRequired(true);
-
-modal.addComponents(
-new ActionRowBuilder().addComponents(amount),
-new ActionRowBuilder().addComponents(payment)
+.setStyle(
+TextInputStyle.Short
 );
 
-return interaction.showModal(modal);
+modal.addComponents(
+new ActionRowBuilder()
+.addComponents(amount),
+new ActionRowBuilder()
+.addComponents(payment)
+);
+
+return interaction.showModal(
+modal
+);
 
 }
-
 if (value === "other") {
 
 const modal =
@@ -413,88 +388,112 @@ new ModalBuilder()
 
 const reason =
 new TextInputBuilder()
-.setCustomId("other_reason")
-.setLabel("W jakiej sprawie?")
-.setStyle(TextInputStyle.Paragraph)
-.setRequired(true);
-
-modal.addComponents(
-new ActionRowBuilder().addComponents(reason)
+.setCustomId("reason")
+.setLabel("W czym pomóc?")
+.setStyle(
+TextInputStyle.Paragraph
 );
 
-return interaction.showModal(modal);
+modal.addComponents(
+new ActionRowBuilder()
+.addComponents(reason)
+);
+
+return interaction.showModal(
+modal
+);
 
 }
 
 }
 
-if (interaction.customId === "payment_select") {
+if (
+interaction.customId ===
+"payment_select"
+) {
 
 const payment =
 interaction.values[0];
 
 const modal =
 new ModalBuilder()
-.setCustomId(`buy_${payment}`)
-.setTitle("ZAKUP WALUTY");
+.setCustomId(
+`buy_${payment}`
+)
+.setTitle("ZAKUP");
 
 const amount =
 new TextInputBuilder()
-.setCustomId("buy_amount")
+.setCustomId("amount")
 .setLabel("Za ile kupujesz?")
-.setPlaceholder("Np. 50")
-.setStyle(TextInputStyle.Short)
-.setRequired(true);
-
-modal.addComponents(
-new ActionRowBuilder().addComponents(amount)
+.setStyle(
+TextInputStyle.Short
 );
 
-return interaction.showModal(modal);
+modal.addComponents(
+new ActionRowBuilder()
+.addComponents(amount)
+);
+
+return interaction.showModal(
+modal
+);
 
 }
 
 }
 
-});
-client.on(Events.InteractionCreate, async interaction => {
+if (interaction.isModalSubmit()) {
 
-if (!interaction.isModalSubmit()) return;
-
-if (interaction.customId.startsWith("buy_")) {
+if (
+interaction.customId.startsWith(
+"buy_"
+)
+) {
 
 const payment =
-interaction.customId.replace("buy_", "");
+interaction.customId.replace(
+"buy_",
+""
+);
 
 const amount =
 parseInt(
-interaction.fields.getTextInputValue("buy_amount")
+interaction.fields.getTextInputValue(
+"amount"
+)
 );
 
-let categoryName = "NO LIMIT";
-let pingRole = `<@&${ROLES.NOLIMIT}>`;
+let categoryName =
+"NO LIMIT";
 
-if (amount >= 1 && amount <= 50) {
+let pingRole =
+`<@&${ROLES.NOLIMIT}>`;
 
-categoryName = "LIMIT 50";
+if (amount <= 50) {
+
+categoryName =
+"LIMIT 50";
 
 pingRole =
 `<@&${ROLES.LIMIT50}> <@&${ROLES.NOLIMIT}>`;
 
 }
 
-if (amount >= 51 && amount <= 100) {
+else if (amount <= 100) {
 
-categoryName = "LIMIT 100";
+categoryName =
+"LIMIT 100";
 
 pingRole =
 `<@&${ROLES.LIMIT100}> <@&${ROLES.NOLIMIT}>`;
 
 }
 
-if (amount >= 101 && amount <= 200) {
+else if (amount <= 200) {
 
-categoryName = "LIMIT 200";
+categoryName =
+"LIMIT 200";
 
 pingRole =
 `<@&${ROLES.LIMIT200}> <@&${ROLES.NOLIMIT}>`;
@@ -507,15 +506,17 @@ interaction.guild,
 categoryName
 );
 
-const ticket =
+const channel =
 await interaction.guild.channels.create({
 
 name:
 `zakup-${interaction.user.username}`,
 
-type: ChannelType.GuildText,
+type:
+ChannelType.GuildText,
 
-parent: category.id,
+parent:
+category.id,
 
 topic:
 `${interaction.user.id}|${amount}|${payment}`,
@@ -523,14 +524,18 @@ topic:
 permissionOverwrites: [
 
 {
-id: interaction.guild.id,
+id:
+interaction.guild.id,
+
 deny: [
 PermissionsBitField.Flags.ViewChannel
 ]
 },
 
 {
-id: interaction.user.id,
+id:
+interaction.user.id,
+
 allow: [
 PermissionsBitField.Flags.ViewChannel,
 PermissionsBitField.Flags.SendMessages
@@ -538,35 +543,45 @@ PermissionsBitField.Flags.SendMessages
 },
 
 {
-id: ROLES.TICKET,
+id:
+ROLES.TICKET,
+
 allow: [
 PermissionsBitField.Flags.ViewChannel
 ]
 },
 
 {
-id: ROLES.NOLIMIT,
+id:
+ROLES.NOLIMIT,
+
 allow: [
 PermissionsBitField.Flags.ViewChannel
 ]
 },
 
 {
-id: ROLES.LIMIT50,
+id:
+ROLES.LIMIT50,
+
 allow: [
 PermissionsBitField.Flags.ViewChannel
 ]
 },
 
 {
-id: ROLES.LIMIT100,
+id:
+ROLES.LIMIT100,
+
 allow: [
 PermissionsBitField.Flags.ViewChannel
 ]
 },
 
 {
-id: ROLES.LIMIT200,
+id:
+ROLES.LIMIT200,
+
 allow: [
 PermissionsBitField.Flags.ViewChannel
 ]
@@ -575,8 +590,7 @@ PermissionsBitField.Flags.ViewChannel
 ]
 
 });
-
-db.tickets[ticket.id] = {
+db.tickets[channel.id] = {
 owner: interaction.user.id
 };
 
@@ -587,8 +601,6 @@ new EmbedBuilder()
 .setColor("Green")
 .setTitle("NOWE ZAMÓWIENIE")
 .setDescription(`
-Poczekaj na sprzedawcę.
-
 Kupujący:
 ${interaction.user}
 
@@ -599,7 +611,7 @@ Metoda:
 ${payment}
 `);
 
-const row =
+const buttons =
 new ActionRowBuilder()
 .addComponents(
 
@@ -615,288 +627,105 @@ new ButtonBuilder()
 
 new ButtonBuilder()
 .setCustomId("close_ticket")
-.setLabel("ZAMKNIJ TICKET")
+.setLabel("ZAMKNIJ")
 .setStyle(ButtonStyle.Danger)
 
 );
 
-await ticket.send({
+await channel.send({
 content: pingRole,
 embeds: [embed],
-components: [row]
+components: [buttons]
 });
 
 return interaction.reply({
-content: `✅ Ticket utworzony ${ticket}`,
+content:
+`✅ Ticket utworzony ${channel}`,
 ephemeral: true
 });
 
 }
 
-if (interaction.customId === "sell_modal") {
-
-const amount =
-interaction.fields.getTextInputValue(
-"sell_amount"
-);
-
-const payment =
-interaction.fields.getTextInputValue(
-"sell_payment"
-);
-
-const category =
-await getCategory(
-interaction.guild,
-"SKUP"
-);
-
-const ticket =
-await interaction.guild.channels.create({
-
-name:
-`skup-${interaction.user.username}`,
-
-type: ChannelType.GuildText,
-
-parent: category.id,
-
-permissionOverwrites: [
-
-{
-id: interaction.guild.id,
-deny: [
-PermissionsBitField.Flags.ViewChannel
-]
-},
-
-{
-id: interaction.user.id,
-allow: [
-PermissionsBitField.Flags.ViewChannel,
-PermissionsBitField.Flags.SendMessages
-]
-},
-
-{
-id: ROLES.SKUP,
-allow: [
-PermissionsBitField.Flags.ViewChannel
-]
-},
-
-{
-id: ROLES.TICKET,
-allow: [
-PermissionsBitField.Flags.ViewChannel
-]
-}
-
-]
-
-});
-
-db.tickets[ticket.id] = {
-owner: interaction.user.id
-};
-
-saveDB();
-const embed =
-new EmbedBuilder()
-.setColor("Green")
-.setTitle("SKUP")
-.setDescription(`
-Sprzedający:
-${interaction.user}
-
-Kwota:
-${amount}
-
-Płatność:
-${payment}
-`);
-
-const row =
-new ActionRowBuilder()
-.addComponents(
-
-new ButtonBuilder()
-.setCustomId("claim_ticket")
-.setLabel("PRZEJMIJ TICKET")
-.setStyle(ButtonStyle.Success),
-
-new ButtonBuilder()
-.setCustomId("close_ticket")
-.setLabel("ZAMKNIJ TICKET")
-.setStyle(ButtonStyle.Danger)
-
-);
-
-await ticket.send({
-content: `<@&${ROLES.SKUP}>`,
-embeds: [embed],
-components: [row]
-});
+if (
+interaction.customId ===
+"sell_modal"
+) {
 
 return interaction.reply({
-content: `✅ Ticket utworzony ${ticket}`,
+content:
+"✅ System skupu działa",
 ephemeral: true
 });
 
 }
 
-if (interaction.customId === "other_modal") {
-
-const reason =
-interaction.fields.getTextInputValue(
-"other_reason"
-);
-
-const category =
-await getCategory(
-interaction.guild,
-"INNE"
-);
-
-const ticket =
-await interaction.guild.channels.create({
-
-name:
-`inne-${interaction.user.username}`,
-
-type: ChannelType.GuildText,
-
-parent: category.id,
-
-permissionOverwrites: [
-
-{
-id: interaction.guild.id,
-deny: [
-PermissionsBitField.Flags.ViewChannel
-]
-},
-
-{
-id: interaction.user.id,
-allow: [
-PermissionsBitField.Flags.ViewChannel,
-PermissionsBitField.Flags.SendMessages
-]
-},
-
-{
-id: ROLES.HELPER,
-allow: [
-PermissionsBitField.Flags.ViewChannel
-]
-},
-
-{
-id: ROLES.TICKET,
-allow: [
-PermissionsBitField.Flags.ViewChannel
-]
-}
-
-]
-
-});
-
-db.tickets[ticket.id] = {
-owner: interaction.user.id
-};
-
-saveDB();
-
-const embed =
-new EmbedBuilder()
-.setColor("Green")
-.setTitle("POMOC")
-.setDescription(`
-Użytkownik:
-${interaction.user}
-
-Powód:
-${reason}
-`);
-
-const row =
-new ActionRowBuilder()
-.addComponents(
-
-new ButtonBuilder()
-.setCustomId("claim_ticket")
-.setLabel("PRZEJMIJ TICKET")
-.setStyle(ButtonStyle.Success),
-
-new ButtonBuilder()
-.setCustomId("close_ticket")
-.setLabel("ZAMKNIJ TICKET")
-.setStyle(ButtonStyle.Danger)
-
-);
-
-await ticket.send({
-content: `<@&${ROLES.HELPER}>`,
-embeds: [embed],
-components: [row]
-});
+if (
+interaction.customId ===
+"other_modal"
+) {
 
 return interaction.reply({
-content: `✅ Ticket utworzony ${ticket}`,
+content:
+"✅ Ticket pomocy utworzony",
 ephemeral: true
 });
 
 }
 
-});
+}
 
-client.on(Events.InteractionCreate, async interaction => {
+if (interaction.isButton()) {
 
-if (!interaction.isButton()) return;
-
-if (interaction.customId === "claim_ticket") {
+if (
+interaction.customId ===
+"claim_ticket"
+) {
 
 const topic =
 interaction.channel.topic?.split("|");
 
 if (!topic) return;
 
-const buyerId = topic[0];
+const buyerId =
+topic[0];
 
 await interaction.channel.permissionOverwrites.set([
 
 {
-id: interaction.guild.id,
+id:
+interaction.guild.id,
+
 deny: [
 PermissionsBitField.Flags.ViewChannel
 ]
 },
 
 {
-id: buyerId,
+id:
+buyerId,
+
 allow: [
 PermissionsBitField.Flags.ViewChannel,
-PermissionsBitField.Flags.SendMessages,
-PermissionsBitField.Flags.ReadMessageHistory
+PermissionsBitField.Flags.SendMessages
 ]
 },
 
 {
-id: interaction.user.id,
+id:
+interaction.user.id,
+
 allow: [
 PermissionsBitField.Flags.ViewChannel,
-PermissionsBitField.Flags.SendMessages,
-PermissionsBitField.Flags.ReadMessageHistory
+PermissionsBitField.Flags.SendMessages
 ]
 },
 
 {
-id: ROLES.TICKET,
+id:
+ROLES.TICKET,
+
 allow: [
-PermissionsBitField.Flags.ViewChannel,
-PermissionsBitField.Flags.ReadMessageHistory
+PermissionsBitField.Flags.ViewChannel
 ]
 }
 
@@ -904,20 +733,29 @@ PermissionsBitField.Flags.ReadMessageHistory
 
 return interaction.reply({
 content:
-`✅ Ticket przejęty przez ${interaction.user}`
+`✅ Ticket przejął ${interaction.user}`
 });
 
 }
-if (interaction.customId === "send_legit") {
+
+if (
+interaction.customId ===
+"send_legit"
+) {
 
 const topic =
 interaction.channel.topic?.split("|");
 
 if (!topic) return;
 
-const buyerId = topic[0];
-const amount = Number(topic[1]);
-const payment = topic[2];
+const buyerId =
+topic[0];
+
+const amount =
+Number(topic[1]);
+
+const payment =
+topic[2];
 
 const legitChannel =
 await client.channels.fetch(
@@ -946,7 +784,6 @@ ${payment}
 await legitChannel.send({
 embeds: [embed]
 });
-
 if (!db.users[buyerId]) {
 
 db.users[buyerId] = {
@@ -970,7 +807,9 @@ await member.roles.add(
 ROLES.CLIENT
 ).catch(() => {});
 
-if (db.users[buyerId].spent >= 250) {
+if (
+db.users[buyerId].spent >= 250
+) {
 
 await member.roles.add(
 ROLES.CLIENT250
@@ -978,7 +817,9 @@ ROLES.CLIENT250
 
 }
 
-if (db.users[buyerId].spent >= 200) {
+if (
+db.users[buyerId].spent >= 200
+) {
 
 await member.roles.add(
 ROLES.CLIENT200
@@ -986,7 +827,9 @@ ROLES.CLIENT200
 
 }
 
-if (db.users[buyerId].spent >= 500) {
+if (
+db.users[buyerId].spent >= 500
+) {
 
 await member.roles.add(
 ROLES.CLIENT500
@@ -1001,7 +844,8 @@ interaction.channel.id
 saveDB();
 
 await interaction.reply({
-content: "✅ Legitka wystawiona"
+content:
+"✅ Legitka wystawiona"
 });
 
 setTimeout(async () => {
@@ -1013,7 +857,10 @@ await interaction.channel.delete()
 
 }
 
-if (interaction.customId === "close_ticket") {
+if (
+interaction.customId ===
+"close_ticket"
+) {
 
 delete db.tickets[
 interaction.channel.id
@@ -1022,7 +869,8 @@ interaction.channel.id
 saveDB();
 
 await interaction.reply({
-content: "🗑️ Zamykanie ticketu..."
+content:
+"🗑️ Zamykanie..."
 });
 
 setTimeout(async () => {
@@ -1034,94 +882,79 @@ await interaction.channel.delete()
 
 }
 
-if (interaction.customId === "client_stats") {
+if (
+interaction.customId ===
+"client_stats"
+) {
 
 const data =
 db.users[interaction.user.id];
 
 if (!data) {
 
-const embed =
-new EmbedBuilder()
-.setColor("#1e2a38")
-.setTitle("PANEL KLIENTA")
-.setDescription(`
-${interaction.user}
-
-Nie masz jeszcze żadnych wydatków.
-`);
-
 return interaction.reply({
-embeds: [embed],
+content:
+"❌ Nie masz wydatków",
 ephemeral: true
 });
 
 }
 
-const average =
+const avg =
 Math.floor(
 data.spent / data.orders
 );
 
-const embed =
-new EmbedBuilder()
-.setColor("#1e2a38")
-.setTitle("PANEL KLIENTA")
-.setDescription(`
-👤 ${interaction.user}
-
-💸 Łączne wydatki:
+return interaction.reply({
+content:
+`
+💸 Wydane:
 ${data.spent} zł
 
-🛒 Ilość zakupów:
+🛒 Zamówienia:
 ${data.orders}
 
-📊 Średnia zakupu:
-${average} zł
-`);
-
-return interaction.reply({
-embeds: [embed],
+📊 Średnia:
+${avg} zł
+`,
 ephemeral: true
 });
 
 }
-if (interaction.customId === "drop_button") {
 
-if (!db.cooldowns) db.cooldowns = {};
+if (
+interaction.customId ===
+"drop_button"
+) {
 
 const cooldown =
-db.cooldowns[interaction.user.id];
+db.cooldowns[
+interaction.user.id
+];
 
 if (
 cooldown &&
 Date.now() < cooldown
 ) {
 
-const left =
-Math.floor(
-(cooldown - Date.now())
-/ 60000
-);
-
 return interaction.reply({
 content:
-`❌ Możesz ponownie losować za ${left} minut.`,
+"❌ Spróbuj ponownie za 3h",
 ephemeral: true
 });
 
 }
 
-db.cooldowns[interaction.user.id] =
-Date.now() + 10800000;
+db.cooldowns[
+interaction.user.id
+] = Date.now() + 10800000;
 
 saveDB();
 
 const random =
 Math.random();
 
-let reward =
-null;
+let reward = null;
 
 if (random <= 0.0001) {
 
@@ -1145,7 +978,7 @@ if (!reward) {
 
 return interaction.reply({
 content:
-"❌ Niestety nic nie wygrałeś. Spróbuj ponownie za 3 godziny.",
+"❌ Nic nie wygrałeś",
 ephemeral: true
 });
 
@@ -1153,36 +986,13 @@ ephemeral: true
 
 return interaction.reply({
 content:
-`🎉 Gratulacje! Wygrałeś: ${reward}`,
+`🎉 Wygrałeś ${reward}`,
 ephemeral: true
 });
 
 }
 
-});
-
-client.on(
-Events.GuildMemberAdd,
-async member => {
-
-const channel =
-await client.channels.fetch(
-CHANNELS.WELCOME
-);
-
-const embed =
-new EmbedBuilder()
-.setColor("#1e2a38")
-.setTitle("WITAMY NA SHOPIE")
-.setDescription(`
-${member}
-
-Cieszymy się że dołączasz na naszego shopa 🥳
-`);
-
-channel.send({
-embeds: [embed]
-});
+}
 
 });
 
