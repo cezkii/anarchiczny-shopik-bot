@@ -24,7 +24,6 @@ const HELPER_ROLE =
 "1502601578400579604";
 
 let invites = {};
-let giveaways = {};
 
 client.once(
 Events.ClientReady,
@@ -37,7 +36,7 @@ new SlashCommandBuilder()
 .setName("zapro")
 
 .setDescription(
-"Stwórz reklamę"
+"Dodaj zaproszenie"
 ),
 
 new SlashCommandBuilder()
@@ -89,10 +88,18 @@ body: commands
 );
 
 console.log(
-"Komendy załadowane"
+"✅ Komendy załadowane"
 );
 
 });
+
+
+
+
+
+/* =========================
+   INTERACTION
+========================= */
 
 client.on(
 Events.InteractionCreate,
@@ -123,13 +130,15 @@ CHANNEL_ZAPRO
 return interaction.reply({
 
 content:
-"❌ Tej komendy można używać tylko na wyznaczonym kanale",
+"❌ Komenda działa tylko na kanale zaproszeń",
 
 ephemeral: true
 
 });
 
 }
+
+await interaction.deferReply();
 
 invites[
 interaction.user.id
@@ -152,14 +161,16 @@ new EmbedBuilder()
 👤 Użytkownik:
 ${interaction.user}
 
-📈 Łączne zaproszenia:
+📈 Ilość zaproszeń:
 ${invites[
 interaction.user.id
 ]}
 
+🎉 Dziękujemy za reklamę serwera
+
 `);
 
-return interaction.reply({
+return interaction.editReply({
 
 embeds: [embed]
 
@@ -188,7 +199,7 @@ CHANNEL_GIVEAWAY
 return interaction.reply({
 
 content:
-"❌ Konkursy można robić tylko na kanale giveaway",
+"❌ Konkurs można zrobić tylko na giveaway",
 
 ephemeral: true
 
@@ -269,6 +280,11 @@ ${wygrani}
 ⏰ Czas:
 ${czas}
 
+📋 WYMAGANIA:
+• Zaproś 1 osobę
+• Dodaj legitkę
+• Bądź aktywny
+
 🎊 Kliknij przycisk poniżej aby dołączyć
 
 `);
@@ -284,7 +300,7 @@ components: [row]
 return interaction.reply({
 
 content:
-"✅ Konkurs utworzony",
+"✅ Konkurs został utworzony",
 
 ephemeral: true
 
@@ -293,6 +309,14 @@ ephemeral: true
 }
 
 });
+
+
+
+
+
+/* =========================
+   GIVEAWAY BUTTON
+========================= */
 
 client.on(
 Events.InteractionCreate,
