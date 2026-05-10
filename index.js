@@ -781,18 +781,6 @@ ephemeral: true
 
 }
 
-if (
-interaction.customId ===
-"other_modal"
-) {
-
-return interaction.reply({
-content:
-"✅ Ticket pomocy utworzony",
-ephemeral: true
-});
-
-}
 
 
 if (interaction.isButton()) {
