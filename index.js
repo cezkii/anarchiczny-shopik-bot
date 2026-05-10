@@ -11,10 +11,7 @@ PermissionsBitField,
 Events,
 ModalBuilder,
 TextInputBuilder,
-TextInputStyle,
-SlashCommandBuilder,
-REST,
-Routes
+TextInputStyle
 } = require("discord.js");
 
 const fs = require("fs");
@@ -23,31 +20,392 @@ const client = new Client({
 intents: [
 GatewayIntentBits.Guilds,
 GatewayIntentBits.GuildMessages,
-GatewayIntentBits.GuildMembers,
-GatewayIntentBits.MessageContent
+GatewayIntentBits.MessageContent,
+GatewayIntentBits.GuildMembers
 ]
 });
 
 const TOKEN = process.env.TOKEN;
 
-const CLIENT_ID = "1502359226532499659";
-const GUILD_ID = "1502353179722121377";
 const CHANNELS = {
+TICKETS: "1502358629402284234",
+LEGIT: "1502356815495692440",
+WELCOME: "1502652604973318376",
+PAYMENTS: "1502648184714039486",
+CLIENT_PANEL: "1502649421136003132",
+INVITES: "1502650236324024421",
+DROP: "1502655319392915466",
+GIVEAWAYS: "1502654052318707782"
+};
+
+const ROLES = {
+LIMIT50: "1502388117309755542",
+LIMIT100: "1502388253691744399",
+LIMIT200: "1502388290265944085",
+NOLIMIT: "1502388310394540092",
+TICKET: "1502363051003871282",
+HELPER: "1502601578400579604",
+SKUP: "1502761459371737108",
+CLIENT: "1502661344455823431",
+CLIENT250: "1502663222258307294",
+CLIENT200: "1502664307169689738",
+CLIENT500: "1502665546922197042"
+};
+
+let db = {
+users: {},
+tickets: {},
+cooldowns: {}
+};
+
+if (fs.existsSync("./database.json")) {
+
+db = JSON.parse(
+fs.readFileSync("./database.json")
+);
+
+}
+
+function saveDB() {
+
+fs.writeFileSync(
+"./database.json",
+JSON.stringify(db, null, 2)
+);
+
+}
+
+async function getCategory(guild, name) {
+
+let category =
+guild.channels.cache.find(
+c =>
+c.type === ChannelType.GuildCategory &&
+c.name === name
+);
+
+if (!category) {
+
+category =
+await guild.channels.create({
+name,
+type: ChannelType.GuildCategory
+});
+
+}
+
+return category;
+
+}
+
+client.once("clientReady", async () => {
+
+console.log(`${client.user.tag} ONLINE`);
+
+const ticketChannel =
+await client.channels.fetch(
+CHANNELS.TICKETS
+);
+
+const ticketEmbed =
+new EmbedBuilder()
+.setColor("#1e2a38")
+.setTitle("ANARCHICZNY SHOPIK - TICKETY")
+.setDescription("Wybierz temat ticketu");
+
+const ticketMenu =
+new StringSelectMenuBuilder()
+.setCustomId("ticket_select")
+.setPlaceholder("Wybierz temat")
+.addOptions([
+{
+label: "ZAKUP WALUTY",
+value: "buy",
+emoji: "💰"
+},
+{
+label: "SKUP",
+value: "sell",
+emoji: "💵"
+},
+{
+label: "INNE",
+value: "other",
+emoji: "🆘"
+}
+]);
+
+await ticketChannel.send({
+embeds: [ticketEmbed],
+components: [
+new ActionRowBuilder().addComponents(ticketMenu)
+]
+});
+
+const paymentChannel =
+await client.channels.fetch(
+CHANNELS.PAYMENTS
+);
+
+const paymentEmbed =
+new EmbedBuilder()
+.setColor("#1e2a38")
+.setTitle("💳 METODY PŁATNOŚCI")
+.setDescription(`
+🧾 PSC Z PARAGONEM ➜ 15%
+🔐 PSC BEZ PARAGONU ➜ 20%
+🔐 MYPSC ➜ 25%
+📲 BLIK NA NR TEL ➜ 0%
+🔢 KOD BLIK ➜ 10%
+🔫 CS2 SKINS ➜ 40%
+🅿️ PAYPAL ➜ 12%
+`);
+
+await paymentChannel.send({
+embeds: [paymentEmbed]
+});
+
+const clientChannel =
+await client.channels.fetch(
+CHANNELS.CLIENT_PANEL
+);
+
+const clientEmbed =
+new EmbedBuilder()
+.setColor("#1e2a38")
+.setTitle("PANEL KLIENTA")
+.setDescription(
+"Kliknij przycisk poniżej aby sprawdzić wydatki"
+);
+
+const clientButton =
+new ButtonBuilder()
+.setCustomId("client_stats")
+.setLabel("SPRAWDŹ WYDATKI")
+.setStyle(ButtonStyle.Primary);
+
+await clientChannel.send({
+embeds: [clientEmbed],
+components: [
+new ActionRowBuilder().addComponents(clientButton)
+]
+});
+const dropChannel =
+await client.channels.fetch(
+CHANNELS.DROP
+);
+
+const dropEmbed =
+new EmbedBuilder()
+.setColor("#1e2a38")
+.setTitle("DROP SHOPIKA")
+.setDescription(
+"Kliknij przycisk poniżej aby losować nagrodę"
+);
+
+const dropButton =
+new ButtonBuilder()
+.setCustomId("drop_button")
+.setLabel("LOSUJ DROP")
+.setStyle(ButtonStyle.Success);
+
+await dropChannel.send({
+embeds: [dropEmbed],
+components: [
+new ActionRowBuilder().addComponents(dropButton)
+]
+});
+
+});
+
+client.on(
+Events.GuildMemberAdd,
+async member => {
+
+const channel =
+await client.channels.fetch(
+CHANNELS.WELCOME
+);
+
+const embed =
+new EmbedBuilder()
+.setColor("#1e2a38")
+.setTitle("WITAMY")
+.setDescription(`
+${member}
+
+Cieszymy się że dołączasz 🥳
+`);
+
+await channel.send({
+embeds: [embed]
+});
+
+}
+);
+
 client.on(
 Events.InteractionCreate,
 async interaction => {
 
 if (
-!interaction.isStringSelectMenu()
-) return;
+interaction.isStringSelectMenu()
+) {
 
+if (
+interaction.customId ===
+"ticket_select"
+) {
 
+const already =
+Object.values(db.tickets)
+.find(
+t =>
+t.owner === interaction.user.id
+);
 
+if (already) {
 
+return interaction.reply({
+content:
+"❌ Masz już ticket",
+ephemeral: true
+});
 
-/* =========================
-   WYBÓR PŁATNOŚCI
-========================= */
+}
+
+const value =
+interaction.values[0];
+
+if (value === "buy") {
+
+const menu =
+new StringSelectMenuBuilder()
+.setCustomId(
+"payment_select"
+)
+.setPlaceholder(
+"Wybierz metodę"
+)
+.addOptions([
+{
+label:
+"BLIK NA NR TEL",
+value:
+"BLIK NA NR TEL"
+},
+{
+label:
+"KOD BLIK",
+value:
+"KOD BLIK"
+},
+{
+label:
+"PSC Z PARAGONEM",
+value:
+"PSC Z PARAGONEM"
+},
+{
+label:
+"PSC BEZ PARAGONU",
+value:
+"PSC BEZ PARAGONU"
+},
+{
+label:
+"MYPSC",
+value:
+"MYPSC"
+},
+{
+label:
+"CS2 SKINS",
+value:
+"CS2 SKINS"
+},
+{
+label:
+"PAYPAL",
+value:
+"PAYPAL"
+}
+]);
+
+return interaction.reply({
+content:
+"Wybierz metodę płatności",
+components: [
+new ActionRowBuilder()
+.addComponents(menu)
+],
+ephemeral: true
+});
+
+}
+
+if (value === "sell") {
+
+const modal =
+new ModalBuilder()
+.setCustomId("sell_modal")
+.setTitle("SKUP");
+
+const amount =
+new TextInputBuilder()
+.setCustomId("amount")
+.setLabel("Kwota")
+.setStyle(
+TextInputStyle.Short
+);
+
+const payment =
+new TextInputBuilder()
+.setCustomId("payment")
+.setLabel("Forma płatności")
+.setStyle(
+TextInputStyle.Short
+);
+
+modal.addComponents(
+new ActionRowBuilder()
+.addComponents(amount),
+new ActionRowBuilder()
+.addComponents(payment)
+);
+
+return interaction.showModal(
+modal
+);
+
+}
+if (value === "other") {
+
+const modal =
+new ModalBuilder()
+.setCustomId("other_modal")
+.setTitle("POMOC");
+
+const reason =
+new TextInputBuilder()
+.setCustomId("reason")
+.setLabel("W czym pomóc?")
+.setStyle(
+TextInputStyle.Paragraph
+);
+
+modal.addComponents(
+new ActionRowBuilder()
+.addComponents(reason)
+);
+
+return interaction.showModal(
+modal
+);
+
+}
+
+}
 
 if (
 interaction.customId ===
@@ -59,293 +417,22 @@ interaction.values[0];
 
 const modal =
 new ModalBuilder()
-
 .setCustomId(
 `buy_${payment}`
 )
-
-.setTitle(
-"Zakup waluty"
-);
+.setTitle("ZAKUP");
 
 const amount =
 new TextInputBuilder()
-
-.setCustomId(
-"buy_amount"
-)
-
-.setLabel(
-"Za ile kupujesz?"
-)
-
+.setCustomId("amount")
+.setLabel("Za ile kupujesz?")
 .setStyle(
 TextInputStyle.Short
-)
-
-.setPlaceholder(
-"Np 50"
-)
-
-.setRequired(true);
+);
 
 modal.addComponents(
-
 new ActionRowBuilder()
 .addComponents(amount)
-
-);
-
-return interaction.showModal(
-modal
-);
-
-}
-
-
-
-
-
-/* =========================
-   WYBÓR TICKETA
-========================= */
-
-if (
-interaction.customId ===
-"ticket_select"
-) {
-
-const already =
-Object.values(db.tickets).find(
-t =>
-t.owner === interaction.user.id
-);
-
-if (already) {
-
-return interaction.reply({
-
-content:
-"❌ Masz już otwarty ticket",
-
-ephemeral: true
-
-});
-
-}
-
-const value =
-interaction.values[0];
-
-
-
-
-
-/* =========================
-   ZAKUP
-========================= */
-
-if (
-value === "buy"
-) {
-
-const menu =
-new StringSelectMenuBuilder()
-
-.setCustomId(
-"payment_select"
-)
-
-.setPlaceholder(
-"Wybierz metodę płatności"
-)
-
-.addOptions([
-
-{
-label:
-"BLIK NA NR",
-value:
-"BLIK NA NR",
-emoji:
-"💰"
-},
-
-{
-label:
-"KOD BLIK",
-value:
-"KOD BLIK",
-emoji:
-"💸"
-},
-
-{
-label:
-"PSC Z PARAGONEM",
-value:
-"PSC Z PARAGONEM",
-emoji:
-"💳"
-},
-
-{
-label:
-"PSC BEZ PARAGONU",
-value:
-"PSC BEZ PARAGONU",
-emoji:
-"🧾"
-},
-
-{
-label:
-"MYPSC",
-value:
-"MYPSC",
-emoji:
-"💵"
-},
-
-{
-label:
-"PAYPAL",
-value:
-"PAYPAL",
-emoji:
-"📲"
-},
-
-{
-label:
-"CS2 SKINS",
-value:
-"CS2 SKINS",
-emoji:
-"🔫"
-}
-
-]);
-
-const row =
-new ActionRowBuilder()
-.addComponents(menu);
-
-return interaction.reply({
-
-content:
-"💳 Wybierz metodę płatności",
-
-components: [row],
-
-ephemeral: true
-
-});
-
-}
-
-
-
-
-
-/* =========================
-   SKUP
-========================= */
-
-if (
-value === "sell"
-) {
-
-const modal =
-new ModalBuilder()
-
-.setCustomId(
-"sell_modal"
-)
-
-.setTitle(
-"Skup waluty"
-);
-
-const amount =
-new TextInputBuilder()
-
-.setCustomId(
-"sell_amount"
-)
-
-.setLabel(
-"Ile sprzedajesz?"
-)
-
-.setPlaceholder(
-"Np 100"
-)
-
-.setStyle(
-TextInputStyle.Short
-)
-
-.setRequired(true);
-
-modal.addComponents(
-
-new ActionRowBuilder()
-.addComponents(amount)
-
-);
-
-return interaction.showModal(
-modal
-);
-
-}
-
-
-
-
-
-/* =========================
-   INNE
-========================= */
-
-if (
-value === "other"
-) {
-
-const modal =
-new ModalBuilder()
-
-.setCustomId(
-"other_modal"
-)
-
-.setTitle(
-"Pomoc"
-);
-
-const reason =
-new TextInputBuilder()
-
-.setCustomId(
-"other_reason"
-)
-
-.setLabel(
-"Opisz problem"
-)
-
-.setStyle(
-TextInputStyle.Paragraph
-)
-
-.setRequired(true);
-
-modal.addComponents(
-
-new ActionRowBuilder()
-.addComponents(reason)
-
 );
 
 return interaction.showModal(
@@ -356,22 +443,7 @@ modal
 
 }
 
-});
-client.on(
-Events.InteractionCreate,
-async interaction => {
-
-if (
-!interaction.isModalSubmit()
-) return;
-
-
-
-
-
-/* =========================
-   ZAKUP
-========================= */
+if (interaction.isModalSubmit()) {
 
 if (
 interaction.customId.startsWith(
@@ -386,24 +458,11 @@ interaction.customId.replace(
 );
 
 const amount =
-Number(
+parseInt(
 interaction.fields.getTextInputValue(
-"buy_amount"
+"amount"
 )
 );
-
-if (isNaN(amount)) {
-
-return interaction.reply({
-
-content:
-"❌ Podaj poprawną kwotę",
-
-ephemeral: true
-
-});
-
-}
 
 let categoryName =
 "NO LIMIT";
@@ -417,7 +476,7 @@ categoryName =
 "LIMIT 50";
 
 pingRole =
-`<@&${ROLES.LIMIT50}>`;
+`<@&${ROLES.LIMIT50}> <@&${ROLES.NOLIMIT}>`;
 
 }
 
@@ -427,7 +486,7 @@ categoryName =
 "LIMIT 100";
 
 pingRole =
-`<@&${ROLES.LIMIT100}>`;
+`<@&${ROLES.LIMIT100}> <@&${ROLES.NOLIMIT}>`;
 
 }
 
@@ -437,7 +496,7 @@ categoryName =
 "LIMIT 200";
 
 pingRole =
-`<@&${ROLES.LIMIT200}>`;
+`<@&${ROLES.LIMIT200}> <@&${ROLES.NOLIMIT}>`;
 
 }
 
@@ -447,7 +506,7 @@ interaction.guild,
 categoryName
 );
 
-const ticket =
+const channel =
 await interaction.guild.channels.create({
 
 name:
@@ -488,318 +547,149 @@ id:
 ROLES.TICKET,
 
 allow: [
-PermissionsBitField.Flags.ViewChannel,
-PermissionsBitField.Flags.SendMessages
+PermissionsBitField.Flags.ViewChannel
+]
+},
+
+{
+id:
+ROLES.NOLIMIT,
+
+allow: [
+PermissionsBitField.Flags.ViewChannel
+]
+},
+
+{
+id:
+ROLES.LIMIT50,
+
+allow: [
+PermissionsBitField.Flags.ViewChannel
+]
+},
+
+{
+id:
+ROLES.LIMIT100,
+
+allow: [
+PermissionsBitField.Flags.ViewChannel
+]
+},
+
+{
+id:
+ROLES.LIMIT200,
+
+allow: [
+PermissionsBitField.Flags.ViewChannel
 ]
 }
 
 ]
 
 });
-db.tickets[
-ticket.id
-] = {
-
-owner:
-interaction.user.id
-
+db.tickets[channel.id] = {
+owner: interaction.user.id
 };
 
 saveDB();
 
 const embed =
 new EmbedBuilder()
-
 .setColor("Green")
-
-.setTitle(
-"💸 NOWE ZAMÓWIENIE"
-)
-
+.setTitle("NOWE ZAMÓWIENIE")
 .setDescription(`
-
-👤 Kupujący:
+Kupujący:
 ${interaction.user}
 
-💰 Kwota:
+Kwota:
 ${amount} zł
 
-💳 Płatność:
+Metoda:
 ${payment}
-
-🕒 Status:
-OCZEKIWANIE
-
 `);
 
-const row =
+const buttons =
 new ActionRowBuilder()
-
 .addComponents(
 
 new ButtonBuilder()
-
-.setCustomId(
-"claim_ticket"
-)
-
-.setLabel(
-"PRZEJMIJ"
-)
-
-.setStyle(
-ButtonStyle.Success
-),
+.setCustomId("claim_ticket")
+.setLabel("PRZEJMIJ TICKET")
+.setStyle(ButtonStyle.Success),
 
 new ButtonBuilder()
-
-.setCustomId(
-"send_legit"
-)
-
-.setLabel(
-"WYSTAW LEGITKĘ"
-)
-
-.setStyle(
-ButtonStyle.Primary
-),
+.setCustomId("send_legit")
+.setLabel("WYSTAW LEGITKĘ")
+.setStyle(ButtonStyle.Success),
 
 new ButtonBuilder()
-
-.setCustomId(
-"close_ticket"
-)
-
-.setLabel(
-"ZAMKNIJ"
-)
-
-.setStyle(
-ButtonStyle.Danger
-)
+.setCustomId("close_ticket")
+.setLabel("ZAMKNIJ")
+.setStyle(ButtonStyle.Danger)
 
 );
 
-await ticket.send({
-
-content:
-`${pingRole} ${interaction.user}`,
-
+await channel.send({
+content: pingRole,
 embeds: [embed],
-
-components: [row]
-
+components: [buttons]
 });
 
 return interaction.reply({
-
 content:
-`✅ Ticket utworzony ${ticket}`,
-
+`✅ Ticket utworzony ${channel}`,
 ephemeral: true
-
 });
 
 }
-
-
-
-
-
-/* =========================
-   SKUP
-========================= */
 
 if (
 interaction.customId ===
 "sell_modal"
 ) {
 
-const amount =
-interaction.fields.getTextInputValue(
-"sell_amount"
-);
-
-const category =
-await getCategory(
-interaction.guild,
-"SKUP"
-);
-
-const ticket =
-await interaction.guild.channels.create({
-
-name:
-`skup-${interaction.user.username}`,
-
-type:
-ChannelType.GuildText,
-
-parent:
-category.id,
-
-permissionOverwrites: [
-
-{
-id:
-interaction.guild.id,
-
-deny: [
-PermissionsBitField.Flags.ViewChannel
-]
-},
-
-{
-id:
-interaction.user.id,
-
-allow: [
-PermissionsBitField.Flags.ViewChannel,
-PermissionsBitField.Flags.SendMessages
-]
-},
-
-{
-id:
-ROLES.SKUP,
-
-allow: [
-PermissionsBitField.Flags.ViewChannel,
-PermissionsBitField.Flags.SendMessages
-]
-}
-
-]
-
-});
-db.tickets[
-ticket.id
-] = {
-
-owner:
-interaction.user.id
-
-};
-
-saveDB();
-
-const embed =
-new EmbedBuilder()
-
-.setColor("Orange")
-
-.setTitle(
-"💵 NOWY SKUP"
-)
-
-.setDescription(`
-
-👤 Sprzedający:
-${interaction.user}
-
-💰 Kwota:
-${amount}
-
-🕒 Status:
-OCZEKIWANIE
-
-`);
-
-const row =
-new ActionRowBuilder()
-
-.addComponents(
-
-new ButtonBuilder()
-
-.setCustomId(
-"claim_ticket"
-)
-
-.setLabel(
-"PRZEJMIJ"
-)
-
-.setStyle(
-ButtonStyle.Success
-),
-
-new ButtonBuilder()
-
-.setCustomId(
-"close_ticket"
-)
-
-.setLabel(
-"ZAMKNIJ"
-)
-
-.setStyle(
-ButtonStyle.Danger
-)
-
-);
-
-await ticket.send({
-
-content:
-`<@&${ROLES.SKUP}> ${interaction.user}`,
-
-embeds: [embed],
-
-components: [row]
-
-});
-
 return interaction.reply({
-
 content:
-`✅ Ticket utworzony ${ticket}`,
-
+"✅ System skupu działa",
 ephemeral: true
-
 });
 
 }
-
-
-
-
-
-/* =========================
-   INNE
-========================= */
 
 if (
 interaction.customId ===
 "other_modal"
 ) {
 
-const reason =
-interaction.fields.getTextInputValue(
-"other_reason"
-);
+return interaction.reply({
+content:
+"✅ Ticket pomocy utworzony",
+ephemeral: true
+});
 
-const category =
-await getCategory(
-interaction.guild,
-"INNE"
-);
+}
 
-const ticket =
-await interaction.guild.channels.create({
+}
 
-name:
-`inne-${interaction.user.username}`,
+if (interaction.isButton()) {
 
-type:
-ChannelType.GuildText,
+if (
+interaction.customId ===
+"claim_ticket"
+) {
 
-parent:
-category.id,
+const topic =
+interaction.channel.topic?.split("|");
 
-permissionOverwrites: [
+if (!topic) return;
+
+const buyerId =
+topic[0];
+
+await interaction.channel.permissionOverwrites.set([
 
 {
 id:
@@ -807,6 +697,16 @@ interaction.guild.id,
 
 deny: [
 PermissionsBitField.Flags.ViewChannel
+]
+},
+
+{
+id:
+buyerId,
+
+allow: [
+PermissionsBitField.Flags.ViewChannel,
+PermissionsBitField.Flags.SendMessages
 ]
 },
 
@@ -822,191 +722,31 @@ PermissionsBitField.Flags.SendMessages
 
 {
 id:
-ROLES.HELPER,
+ROLES.TICKET,
 
 allow: [
-PermissionsBitField.Flags.ViewChannel,
-PermissionsBitField.Flags.SendMessages
+PermissionsBitField.Flags.ViewChannel
 ]
 }
 
-]
-
-});
-db.tickets[
-ticket.id
-] = {
-
-owner:
-interaction.user.id
-
-};
-
-saveDB();
-
-const embed =
-new EmbedBuilder()
-
-.setColor("Blue")
-
-.setTitle(
-"🆘 NOWA POMOC"
-)
-
-.setDescription(`
-
-👤 Użytkownik:
-${interaction.user}
-
-📌 Powód:
-${reason}
-
-🕒 Status:
-OCZEKIWANIE
-
-`);
-
-const row =
-new ActionRowBuilder()
-
-.addComponents(
-
-new ButtonBuilder()
-
-.setCustomId(
-"claim_ticket"
-)
-
-.setLabel(
-"PRZEJMIJ"
-)
-
-.setStyle(
-ButtonStyle.Success
-),
-
-new ButtonBuilder()
-
-.setCustomId(
-"close_ticket"
-)
-
-.setLabel(
-"ZAMKNIJ"
-)
-
-.setStyle(
-ButtonStyle.Danger
-)
-
-);
-
-await ticket.send({
-
-content:
-`<@&${ROLES.HELPER}> ${interaction.user}`,
-
-embeds: [embed],
-
-components: [row]
-
-});
-
-return interaction.reply({
-
-content:
-`✅ Ticket utworzony ${ticket}`,
-
-ephemeral: true
-
-});
-
-}
-
-});
-client.on(
-Events.InteractionCreate,
-async interaction => {
-
-if (
-!interaction.isButton()
-) return;
-
-
-
-
-
-/* =========================
-   PRZEJĘCIE TICKETA
-========================= */
-
-if (
-interaction.customId ===
-"claim_ticket"
-) {
-
-const embed =
-EmbedBuilder.from(
-interaction.message.embeds[0]
-);
-
-embed.setFields([
-{
-name:
-"👨‍💼 Obsługuje",
-value:
-`${interaction.user}`,
-inline: true
-}
 ]);
 
-await interaction.message.edit({
-
-embeds: [embed]
-
-});
-
 return interaction.reply({
-
 content:
-`✅ Ticket przejęty przez ${interaction.user}`,
-
-ephemeral: true
-
+`✅ Ticket przejął ${interaction.user}`
 });
 
 }
-
-
-
-
-
-/* =========================
-   LEGITKA
-========================= */
 
 if (
 interaction.customId ===
 "send_legit"
 ) {
 
-if (
-!interaction.channel.topic
-) {
-
-return interaction.reply({
-
-content:
-"❌ Brak danych ticketu",
-
-ephemeral: true
-
-});
-
-}
-
 const topic =
-interaction.channel.topic.split("|");
+interaction.channel.topic?.split("|");
+
+if (!topic) return;
 
 const buyerId =
 topic[0];
@@ -1022,46 +762,33 @@ await client.channels.fetch(
 CHANNELS.LEGIT
 );
 
-await legitChannel.send({
-
-embeds: [
-
+const embed =
 new EmbedBuilder()
-
 .setColor("Green")
-
-.setTitle(
-"✅ NOWA LEGITKA"
-)
-
+.setTitle("NOWA TRANSAKCJA")
 .setDescription(`
-
-👤 Kupujący:
+Kupujący:
 <@${buyerId}>
 
-💰 Kwota:
-${amount} zł
-
-💳 Płatność:
-${payment}
-
-🤝 Sprzedawca:
+Sprzedawca:
 ${interaction.user}
 
+Kwota:
+${amount} zł
+
+Metoda:
+${payment}
 `)
+.setTimestamp();
 
-]
-
+await legitChannel.send({
+embeds: [embed]
 });
-if (
-!db.users[buyerId]
-) {
+if (!db.users[buyerId]) {
 
 db.users[buyerId] = {
-
 spent: 0,
 orders: 0
-
 };
 
 }
@@ -1081,21 +808,21 @@ ROLES.CLIENT
 ).catch(() => {});
 
 if (
-db.users[buyerId].spent >= 200
-) {
-
-await member.roles.add(
-ROLES.CLIENT200
-).catch(() => {});
-
-}
-
-if (
 db.users[buyerId].spent >= 250
 ) {
 
 await member.roles.add(
 ROLES.CLIENT250
+).catch(() => {});
+
+}
+
+if (
+db.users[buyerId].spent >= 200
+) {
+
+await member.roles.add(
+ROLES.CLIENT200
 ).catch(() => {});
 
 }
@@ -1117,32 +844,18 @@ interaction.channel.id
 saveDB();
 
 await interaction.reply({
-
 content:
-"✅ Legitka wystawiona",
-
-ephemeral: true
-
+"✅ Legitka wystawiona"
 });
-
-const currentChannel =
-interaction.channel;
 
 setTimeout(async () => {
 
-await currentChannel.delete()
+await interaction.channel.delete()
 .catch(() => {});
-
-await deleteEmptyCategory(
-currentChannel
-);
 
 }, 3000);
 
 }
-/* =========================
-   ZAMKNIĘCIE TICKETA
-========================= */
 
 if (
 interaction.customId ===
@@ -1156,378 +869,18 @@ interaction.channel.id
 saveDB();
 
 await interaction.reply({
-
 content:
-"🗑️ Ticket zostanie usunięty za 3 sekundy",
-
-ephemeral: true
-
+"🗑️ Zamykanie..."
 });
-
-const currentChannel =
-interaction.channel;
 
 setTimeout(async () => {
 
-await currentChannel.delete()
+await interaction.channel.delete()
 .catch(() => {});
-
-await deleteEmptyCategory(
-currentChannel
-);
 
 }, 3000);
 
 }
-
-
-
-
-
-
-
-/* =========================
-   KONKURS JOIN
-========================= */
-
-if (
-interaction.customId ===
-"giveaway_join"
-) {
-
-return interaction.reply({
-
-content:
-"🎉 Dołączyłeś do konkursu",
-
-ephemeral: true
-
-});
-
-}
-
-
-
-
-
-/* =========================
-   DROP
-========================= */
-
-if (
-interaction.customId ===
-"drop_button"
-) {
-
-if (
-db.cooldowns[
-interaction.user.id
-] &&
-Date.now() <
-db.cooldowns[
-interaction.user.id
-]
-) {
-
-const left =
-Math.floor(
-
-(
-db.cooldowns[
-interaction.user.id
-] - Date.now()
-)
-/ 60000
-
-);
-
-return interaction.reply({
-
-content:
-`❌ Możesz ponownie odebrać drop za ${left} minut`,
-
-ephemeral: true
-
-});
-
-}
-
-db.cooldowns[
-interaction.user.id
-] =
-Date.now() + 10800000;
-
-saveDB();
-const random =
-Math.random();
-
-let reward =
-null;
-
-if (random <= 0.0001) {
-
-reward =
-"100 TYSIĘCY";
-
-}
-
-else if (random <= 0.01) {
-
-reward =
-"BONUS 10%";
-
-}
-
-else if (random <= 0.02) {
-
-reward =
-"BONUS 5%";
-
-}
-
-if (!reward) {
-
-return interaction.reply({
-
-content:
-"❌ Nic nie wygrałeś",
-
-ephemeral: true
-
-});
-
-}
-
-return interaction.reply({
-
-content:
-`🎉 Wygrałeś ${reward}`,
-
-ephemeral: true
-
-});
-
-}
-
-});
-client.on(
-Events.InteractionCreate,
-async interaction => {
-
-if (
-!interaction.isChatInputCommand()
-) return;
-
-
-
-
-
-/* =========================
-   /ZAPRO
-========================= */
-
-if (
-interaction.commandName ===
-"zapro"
-) {
-
-const invited =
-Object.values(
-db.invites
-).filter(
-id => id === interaction.user.id
-).length;
-
-const embed =
-new EmbedBuilder()
-
-.setColor("Blue")
-
-.setTitle(
-"📨 ZAPROSZENIA"
-)
-
-.setDescription(`
-
-👤 Użytkownik:
-${interaction.user}
-
-📈 Ilość zaproszeń:
-${invited}
-
-`);
-
-return interaction.reply({
-
-embeds: [embed]
-
-});
-
-}
-
-
-
-
-
-/* =========================
-   /KONKURS
-========================= */
-
-if (
-interaction.commandName ===
-"konkurs"
-) {
-
-const nagroda =
-interaction.options.getString(
-"nagroda"
-);
-
-const czas =
-interaction.options.getString(
-"czas"
-);
-
-const wygrani =
-interaction.options.getInteger(
-"wygrani"
-);
-
-const row =
-new ActionRowBuilder()
-
-.addComponents(
-
-new ButtonBuilder()
-
-.setCustomId(
-"giveaway_join"
-)
-
-.setLabel(
-"🎉 WEŹ UDZIAŁ"
-)
-
-.setStyle(
-ButtonStyle.Success
-)
-
-);
-
-const embed =
-new EmbedBuilder()
-
-.setColor("Purple")
-
-.setTitle(
-"🎉 NOWY KONKURS"
-)
-
-.setDescription(`
-
-🏆 Nagroda:
-${nagroda}
-
-👥 Ilość wygranych:
-${wygrani}
-
-⏰ Czas:
-${czas}
-
-🎊 Kliknij przycisk poniżej aby dołączyć
-
-`);
-
-await interaction.channel.send({
-
-embeds: [embed],
-
-components: [row]
-
-});
-
-return interaction.reply({
-
-content:
-"✅ Konkurs został utworzony",
-
-ephemeral: true
-
-});
-
-}
-
-});
-client.on(
-Events.GuildMemberAdd,
-async member => {
-
-const inviter =
-member.guild.invites.cache.find(
-i =>
-i.uses > (
-db.invites[i.code] || 0
-)
-);
-
-if (inviter) {
-
-db.invites[
-member.id
-] =
-inviter.inviter.id;
-
-saveDB();
-
-}
-
-const welcomeChannel =
-await client.channels.fetch(
-CHANNELS.WELCOME
-);
-
-const embed =
-new EmbedBuilder()
-
-.setColor("#1e2a38")
-
-.setTitle(
-"👋 WITAMY NA SERWERZE"
-)
-
-.setDescription(`
-
-🎉 Witaj ${member}
-
-📌 Zapoznaj się z kanałami.
-
-💸 Życzymy udanych zakupów.
-
-`);
-
-await welcomeChannel.send({
-
-embeds: [embed]
-
-});
-
-});
-
-
-
-
-
-/* =========================
-   PANEL KLIENTA
-========================= */
-
-client.on(
-Events.InteractionCreate,
-async interaction => {
-
-if (
-!interaction.isButton()
-) return;
 
 if (
 interaction.customId ===
@@ -1535,60 +888,109 @@ interaction.customId ===
 ) {
 
 const data =
-db.users[
-interaction.user.id
-];
+db.users[interaction.user.id];
 
 if (!data) {
 
 return interaction.reply({
-
 content:
-"❌ Nie masz jeszcze żadnych zakupów",
-
+"❌ Nie masz wydatków",
 ephemeral: true
-
 });
 
 }
 
 const avg =
 Math.floor(
-data.spent /
-data.orders
+data.spent / data.orders
 );
 
-const embed =
-new EmbedBuilder()
-
-.setColor("Blue")
-
-.setTitle(
-"📊 PANEL KLIENTA"
-)
-
-.setDescription(`
-
-👤 ${interaction.user}
-
-💸 Łącznie wydane:
+return interaction.reply({
+content:
+`
+💸 Wydane:
 ${data.spent} zł
 
 🛒 Zamówienia:
 ${data.orders}
 
-📈 Średnia:
+📊 Średnia:
 ${avg} zł
+`,
+ephemeral: true
+});
 
-`);
+}
+
+if (
+interaction.customId ===
+"drop_button"
+) {
+
+const cooldown =
+db.cooldowns[
+interaction.user.id
+];
+
+if (
+cooldown &&
+Date.now() < cooldown
+) {
 
 return interaction.reply({
-
-embeds: [embed],
-
+content:
+"❌ Spróbuj ponownie za 3h",
 ephemeral: true
-
 });
+
+}
+
+db.cooldowns[
+interaction.user.id
+] = Date.now() + 10800000;
+
+saveDB();
+
+const random =
+Math.random();
+
+let reward = null;
+
+if (random <= 0.0001) {
+
+reward = "100 TYSIĘCY";
+
+}
+
+else if (random <= 0.01) {
+
+reward = "BONUS 10%";
+
+}
+
+else if (random <= 0.02) {
+
+reward = "BONUS 5%";
+
+}
+
+if (!reward) {
+
+return interaction.reply({
+content:
+"❌ Nic nie wygrałeś",
+ephemeral: true
+});
+
+}
+
+return interaction.reply({
+content:
+`🎉 Wygrałeś ${reward}`,
+ephemeral: true
+});
+
+}
 
 }
 
