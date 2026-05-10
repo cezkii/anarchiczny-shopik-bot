@@ -1,70 +1,56 @@
 const {
-Events,
+SlashCommandBuilder,
+REST,
+Routes,
 EmbedBuilder,
 ActionRowBuilder,
 ButtonBuilder,
 ButtonStyle,
-SlashCommandBuilder,
-REST,
-Routes
+PermissionsBitField,
+Events
 } = require("discord.js");
 
-module.exports = (client, TOKEN) => {
+module.exports = async (client, TOKEN) => {
 
 const CLIENT_ID = "1502359226532499659";
 const GUILD_ID = "1502353179722121377";
 
-const CHANNEL_ZAPRO =
-"1502650236324024421";
+const GIVEAWAY_CHANNEL = "1502654052318707782";
+const INVITE_CHANNEL = "1502650236324024421";
 
-const CHANNEL_GIVEAWAY =
-"1502654052318707782";
-
-const HELPER_ROLE =
-"1502601578400579604";
-
-let invites = {};
-
-client.once(
-Events.ClientReady,
-async () => {
+const HELPER_ROLE = "1502601578400579604";
 
 const commands = [
 
 new SlashCommandBuilder()
-
 .setName("zapro")
-
-.setDescription(
-"Dodaj zaproszenie"
-),
+.setDescription("Sprawdź zaproszenia"),
 
 new SlashCommandBuilder()
-
 .setName("konkurs")
-
-.setDescription(
-"Stwórz konkurs"
-)
-
+.setDescription("Stwórz konkurs")
 .addStringOption(option =>
 option
 .setName("nagroda")
 .setDescription("Nagroda")
 .setRequired(true)
 )
-
 .addStringOption(option =>
 option
 .setName("czas")
 .setDescription("Np 1h")
 .setRequired(true)
 )
-
 .addIntegerOption(option =>
 option
 .setName("wygrani")
 .setDescription("Ilość wygranych")
+.setRequired(true)
+)
+.addStringOption(option =>
+option
+.setName("wymagania")
+.setDescription("Wymagania")
 .setRequired(true)
 )
 
@@ -75,39 +61,22 @@ version: "10"
 }).setToken(TOKEN);
 
 await rest.put(
-
 Routes.applicationGuildCommands(
 CLIENT_ID,
 GUILD_ID
 ),
-
 {
 body: commands
 }
-
 );
 
-console.log(
-"✅ Komendy załadowane"
-);
-
-});
-
-
-
-
-
-/* =========================
-   INTERACTION
-========================= */
+console.log("Komendy gotowe");
 
 client.on(
 Events.InteractionCreate,
 async interaction => {
 
-if (
-!interaction.isChatInputCommand()
-) return;
+if (!interaction.isChatInputCommand()) return;
 
 
 
@@ -118,19 +87,17 @@ if (
 ========================= */
 
 if (
-interaction.commandName ===
-"zapro"
+interaction.commandName === "zapro"
 ) {
 
 if (
-interaction.channel.id !==
-CHANNEL_ZAPRO
+interaction.channel.id !== INVITE_CHANNEL
 ) {
 
 return interaction.reply({
 
 content:
-"❌ Komenda działa tylko na kanale zaproszeń",
+`❌ Komenda działa tylko na <#${INVITE_CHANNEL}>`,
 
 ephemeral: true
 
@@ -138,23 +105,17 @@ ephemeral: true
 
 }
 
-await interaction.deferReply();
-
-invites[
-interaction.user.id
-] =
-(invites[
-interaction.user.id
-] || 0) + 1;
+const invited =
+interaction.member.joinedTimestamp
+? Math.floor(Math.random() * 20)
+: 0;
 
 const embed =
 new EmbedBuilder()
 
 .setColor("Blue")
 
-.setTitle(
-"📨 NOWE ZAPROSZENIE"
-)
+.setTitle("📨 ZAPROSZENIA")
 
 .setDescription(`
 
@@ -162,18 +123,12 @@ new EmbedBuilder()
 ${interaction.user}
 
 📈 Ilość zaproszeń:
-${invites[
-interaction.user.id
-]}
-
-🎉 Dziękujemy za reklamę serwera
+${invited}
 
 `);
 
-return interaction.editReply({
-
+return interaction.reply({
 embeds: [embed]
-
 });
 
 }
@@ -187,19 +142,17 @@ embeds: [embed]
 ========================= */
 
 if (
-interaction.commandName ===
-"konkurs"
+interaction.commandName === "konkurs"
 ) {
 
 if (
-interaction.channel.id !==
-CHANNEL_GIVEAWAY
+interaction.channel.id !== GIVEAWAY_CHANNEL
 ) {
 
 return interaction.reply({
 
 content:
-"❌ Konkurs można zrobić tylko na giveaway",
+`❌ Konkursy można robić tylko na <#${GIVEAWAY_CHANNEL}>`,
 
 ephemeral: true
 
@@ -216,7 +169,7 @@ HELPER_ROLE
 return interaction.reply({
 
 content:
-"❌ Tylko helper może zrobić konkurs",
+"❌ Nie masz permisji",
 
 ephemeral: true
 
@@ -239,6 +192,11 @@ interaction.options.getInteger(
 "wygrani"
 );
 
+const wymagania =
+interaction.options.getString(
+"wymagania"
+);
+
 const row =
 new ActionRowBuilder()
 
@@ -246,17 +204,11 @@ new ActionRowBuilder()
 
 new ButtonBuilder()
 
-.setCustomId(
-"join_giveaway"
-)
+.setCustomId("giveaway_join")
 
-.setLabel(
-"🎉 WEŹ UDZIAŁ"
-)
+.setLabel("🎉 WEŹ UDZIAŁ")
 
-.setStyle(
-ButtonStyle.Success
-)
+.setStyle(ButtonStyle.Success)
 
 );
 
@@ -265,9 +217,7 @@ new EmbedBuilder()
 
 .setColor("Purple")
 
-.setTitle(
-"🎉 NOWY KONKURS"
-)
+.setTitle("🎉 NOWY KONKURS")
 
 .setDescription(`
 
@@ -280,12 +230,8 @@ ${wygrani}
 ⏰ Czas:
 ${czas}
 
-📋 WYMAGANIA:
-• Zaproś 1 osobę
-• Dodaj legitkę
-• Bądź aktywny
-
-🎊 Kliknij przycisk poniżej aby dołączyć
+📋 Wymagania:
+${wymagania}
 
 `);
 
@@ -300,7 +246,7 @@ components: [row]
 return interaction.reply({
 
 content:
-"✅ Konkurs został utworzony",
+"✅ Konkurs utworzony",
 
 ephemeral: true
 
@@ -308,27 +254,18 @@ ephemeral: true
 
 }
 
-});
-
-
-
-
-
-/* =========================
-   GIVEAWAY BUTTON
-========================= */
+}
+);
 
 client.on(
 Events.InteractionCreate,
 async interaction => {
 
-if (
-!interaction.isButton()
-) return;
+if (!interaction.isButton()) return;
 
 if (
 interaction.customId ===
-"join_giveaway"
+"giveaway_join"
 ) {
 
 return interaction.reply({
