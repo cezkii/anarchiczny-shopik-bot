@@ -1,4 +1,6 @@
 const {
+REST,
+Routes,
 SlashCommandBuilder,
 EmbedBuilder,
 ActionRowBuilder,
@@ -7,12 +9,7 @@ ButtonStyle,
 Events
 } = require("discord.js");
 
-const giveaways = {};
-
-let inviteUses = {};
-let inviteData = {};
-
-module.exports = (client) => {
+module.exports = async (client, TOKEN) => {
 
 const CLIENT_ID = "1502359226532499659";
 const GUILD_ID = "1502353179722121377";
@@ -22,15 +19,8 @@ const INVITE_CHANNEL = "1502650236324024421";
 
 const HELPER_ROLE = "1502601578400579604";
 
-let invitesDB = {};
-let giveaways = {};
+const giveaways = {};
 
-
-
-
-
-
-client.on(
 let inviteUses = {};
 let inviteData = {};
 
@@ -39,7 +29,7 @@ let inviteData = {};
 
 
 /* =========================
-   INVITES CACHE
+   INVITE CACHE
 ========================= */
 
 client.once(
@@ -79,12 +69,12 @@ client.on(
 Events.GuildMemberAdd,
 async member => {
 
-const newInvites =
+const invites =
 await member.guild.invites.fetch();
 
 let inviter = null;
 
-newInvites.forEach(invite => {
+invites.forEach(invite => {
 
 const oldUses =
 inviteUses[invite.code] || 0;
@@ -110,11 +100,9 @@ if (
 ) {
 
 inviteData[inviter.id] = {
-
 joins: 0,
 leaves: 0,
 invited: {}
-
 };
 
 }
@@ -125,7 +113,8 @@ inviteData[inviter.id]
 inviteData[inviter.id]
 .invited[member.id] = true;
 
-});
+}
+);
 
 
 
@@ -158,13 +147,15 @@ break;
 
 }
 
-});
+}
+);
+
 
 
 
 
 /* =========================
-   REJESTRACJA KOMEND
+   KOMENDY
 ========================= */
 
 const commands = [
@@ -173,13 +164,17 @@ new SlashCommandBuilder()
 
 .setName("zapro")
 
-.setDescription("Pokazuje zaproszenia"),
+.setDescription(
+"Statystyki zaproszeń"
+),
 
 new SlashCommandBuilder()
 
 .setName("konkurs")
 
-.setDescription("Tworzy konkurs")
+.setDescription(
+"Tworzy konkurs"
+)
 
 .addStringOption(option =>
 option
@@ -191,7 +186,7 @@ option
 .addStringOption(option =>
 option
 .setName("czas")
-.setDescription("Np 2h")
+.setDescription("Np 1h / 1d / 1min")
 .setRequired(true)
 )
 
@@ -211,35 +206,43 @@ option
 
 ].map(cmd => cmd.toJSON());
 
-const rest = new REST({
+const rest =
+new REST({
 version: "10"
 }).setToken(TOKEN);
 
 await rest.put(
+
 Routes.applicationGuildCommands(
 CLIENT_ID,
 GUILD_ID
 ),
+
 {
 body: commands
 }
+
 );
 
-console.log("✅ Komendy gotowe");
+console.log(
+"✅ Komendy załadowane"
+);
 
 
 
 
 
 /* =========================
-   INTERACTION
+   SLASH COMMANDS
 ========================= */
 
 client.on(
 Events.InteractionCreate,
 async interaction => {
 
-if (!interaction.isChatInputCommand()) return;
+if (
+!interaction.isChatInputCommand()
+) return;
 
 
 
@@ -250,11 +253,13 @@ if (!interaction.isChatInputCommand()) return;
 ========================= */
 
 if (
-interaction.commandName === "zapro"
+interaction.commandName ===
+"zapro"
 ) {
 
 if (
-interaction.channel.id !== INVITE_CHANNEL
+interaction.channel.id !==
+INVITE_CHANNEL
 ) {
 
 return interaction.reply({
@@ -273,12 +278,15 @@ inviteData[interaction.user.id] || {
 joins: 0,
 leaves: 0
 };
+
 const embed =
 new EmbedBuilder()
 
 .setColor("Blue")
 
-.setTitle("📨 STATYSTYKI ZAPROSZEŃ")
+.setTitle(
+"📨 STATYSTYKI ZAPROSZEŃ"
+)
 
 .addFields(
 
@@ -300,11 +308,7 @@ value: `${data.joins - data.leaves}`,
 inline: true
 }
 
-)
-
-.setFooter({
-text: interaction.user.username
-});
+);
 
 return interaction.reply({
 embeds: [embed]
@@ -321,11 +325,13 @@ embeds: [embed]
 ========================= */
 
 if (
-interaction.commandName === "konkurs"
+interaction.commandName ===
+"konkurs"
 ) {
 
 if (
-interaction.channel.id !== GIVEAWAY_CHANNEL
+interaction.channel.id !==
+GIVEAWAY_CHANNEL
 ) {
 
 return interaction.reply({
@@ -378,29 +384,27 @@ interaction.options.getString(
 
 let duration = 0;
 
-
-
-
-
-/* =========================
-   CZAS
-========================= */
-
-if (czas.endsWith("h")) {
+if (
+czas.endsWith("h")
+) {
 
 duration =
 parseInt(czas) * 3600000;
 
 }
 
-else if (czas.endsWith("d")) {
+else if (
+czas.endsWith("d")
+) {
 
 duration =
 parseInt(czas) * 86400000;
 
 }
 
-else if (czas.endsWith("min")) {
+else if (
+czas.endsWith("min")
+) {
 
 duration =
 parseInt(czas) * 60000;
@@ -412,23 +416,7 @@ else {
 return interaction.reply({
 
 content:
-"❌ Format czasu: 1h / 1d / 1min",
-
-ephemeral: true
-
-});
-
-}
-
-if (
-isNaN(duration) ||
-duration <= 0
-) {
-
-return interaction.reply({
-
-content:
-"❌ Niepoprawny czas",
+"❌ Format: 1h / 1d / 1min",
 
 ephemeral: true
 
@@ -444,7 +432,9 @@ new EmbedBuilder()
 
 .setColor("Purple")
 
-.setTitle("🎉 NOWY KONKURS")
+.setTitle(
+"🎉 NOWY KONKURS"
+)
 
 .addFields(
 
@@ -462,7 +452,8 @@ inline: true
 
 {
 name: "⏰ Kończy się",
-value: `<t:${Math.floor(endTime / 1000)}:R>`,
+value:
+`<t:${Math.floor(endTime / 1000)}:R>`,
 inline: true
 },
 
@@ -471,11 +462,7 @@ name: "📋 Wymagania",
 value: wymagania
 }
 
-)
-
-.setFooter({
-text: "Kliknij przycisk poniżej aby wziąć udział"
-});
+);
 
 const row =
 new ActionRowBuilder()
@@ -484,11 +471,17 @@ new ActionRowBuilder()
 
 new ButtonBuilder()
 
-.setCustomId("giveaway_join")
+.setCustomId(
+"giveaway_join"
+)
 
-.setLabel("🎉 WEŹ UDZIAŁ")
+.setLabel(
+"🎉 WEŹ UDZIAŁ"
+)
 
-.setStyle(ButtonStyle.Success)
+.setStyle(
+ButtonStyle.Success
+)
 
 );
 
@@ -537,34 +530,31 @@ const winners =
 shuffled.slice(0, wygrani);
 
 const winnersText =
-winners.map(id => `<@${id}>`).join(", ");
+winners.map(id =>
+`<@${id}>`
+).join(", ");
 
 const message =
 wygrani === 1
 
-? `
-
-🎉 Gratulacje ${winnersText}
+? `🎉 Gratulacje ${winnersText}
 
 🏆 Wygrałeś:
 **${nagroda}**
 
-🎫 Zgłoś się na ticket INNE
+🎫 Zgłoś się na ticket INNE`
 
-`
-
-: `
-
-🎉 Gratulacje ${winnersText}
+: `🎉 Gratulacje ${winnersText}
 
 🏆 Wygraliście:
 **${nagroda}**
 
-🎫 Zgłoście się na ticket INNE
+🎫 Zgłoście się na ticket INNE`;
 
-`;
+await interaction.channel.send(
+message
+);
 
-await interaction.channel.send(message);
 delete giveaways[msg.id];
 
 }, duration);
@@ -579,7 +569,9 @@ ephemeral: true
 });
 
 }
-});
+
+}
+);
 
 
 
@@ -593,7 +585,9 @@ client.on(
 Events.InteractionCreate,
 async interaction => {
 
-if (!interaction.isButton()) return;
+if (
+!interaction.isButton()
+) return;
 
 if (
 interaction.customId ===
@@ -657,6 +651,7 @@ ephemeral: true
 
 }
 
-});
+}
+);
 
 };
