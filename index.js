@@ -1,3 +1,38 @@
+const {
+Client,
+GatewayIntentBits,
+EmbedBuilder,
+ActionRowBuilder,
+ButtonBuilder,
+ButtonStyle,
+StringSelectMenuBuilder,
+ChannelType,
+PermissionsBitField,
+Events,
+ModalBuilder,
+TextInputBuilder,
+TextInputStyle,
+SlashCommandBuilder,
+REST,
+Routes
+} = require("discord.js");
+
+const fs = require("fs");
+
+const client = new Client({
+intents: [
+GatewayIntentBits.Guilds,
+GatewayIntentBits.GuildMessages,
+GatewayIntentBits.GuildMembers,
+GatewayIntentBits.MessageContent
+]
+});
+
+const TOKEN = process.env.TOKEN;
+
+const CLIENT_ID = "1502359226532499659";
+const GUILD_ID = "1502353179722121377";
+const CHANNELS = {
 client.on(
 Events.InteractionCreate,
 async interaction => {
