@@ -22,18 +22,22 @@ const fs = require("fs");
 const client = new Client({
 
 intents: [
-
 GatewayIntentBits.Guilds,
-GatewayIntentBits.GuildMessages,
 GatewayIntentBits.GuildMembers,
+GatewayIntentBits.GuildMessages,
 GatewayIntentBits.MessageContent
-
 ]
 
 });
 
 const TOKEN =
 process.env.TOKEN;
+
+const CLIENT_ID =
+process.env.CLIENT_ID;
+
+const GUILD_ID =
+process.env.GUILD_ID;
 
 const CHANNELS = {
 
@@ -51,9 +55,6 @@ PAYMENTS:
 
 CLIENT_PANEL:
 "1502649421136003132",
-
-INVITES:
-"1502650236324024421",
 
 DROP:
 "1502655319392915466",
@@ -104,17 +105,22 @@ let db = {
 
 users: {},
 tickets: {},
+cooldowns: {},
 invites: {},
-cooldowns: {}
+giveaways: {}
 
 };
 
 if (
-fs.existsSync("./database.json")
+fs.existsSync(
+"./database.json"
+)
 ) {
 
 db = JSON.parse(
-fs.readFileSync("./database.json")
+fs.readFileSync(
+"./database.json"
+)
 );
 
 }
@@ -123,7 +129,11 @@ function saveDB() {
 
 fs.writeFileSync(
 "./database.json",
-JSON.stringify(db, null, 2)
+JSON.stringify(
+db,
+null,
+2
+)
 );
 
 }
@@ -173,7 +183,9 @@ c =>
 c.id !== channel.id
 );
 
-if (channels.size <= 0) {
+if (
+channels.size <= 0
+) {
 
 await parent.delete()
 .catch(() => {});
@@ -195,7 +207,7 @@ const commands = [
 new SlashCommandBuilder()
 .setName("zapro")
 .setDescription(
-"Pokazuje zaproszenia"
+"Pokazuje ilość zaproszeń"
 ),
 
 new SlashCommandBuilder()
@@ -203,26 +215,31 @@ new SlashCommandBuilder()
 .setDescription(
 "Tworzy konkurs"
 )
-.addStringOption(o =>
+.addStringOption(
+o =>
 o
 .setName("nagroda")
 .setDescription("Nagroda")
 .setRequired(true)
 )
-.addIntegerOption(o =>
+.addIntegerOption(
+o =>
 o
 .setName("wygrani")
-.setDescription("Ilość wygranych")
+.setDescription("Liczba wygranych")
 .setRequired(true)
 )
-.addStringOption(o =>
+.addStringOption(
+o =>
 o
 .setName("czas")
-.setDescription("Czas")
+.setDescription("Np 1h")
 .setRequired(true)
 )
 
-].map(c => c.toJSON());
+].map(
+c => c.toJSON()
+);
 
 const rest =
 new REST({
@@ -231,11 +248,14 @@ version: "10"
 
 await rest.put(
 
-Routes.applicationCommands(
-client.user.id
+Routes.applicationGuildCommands(
+CLIENT_ID,
+GUILD_ID
 ),
 
-{ body: commands }
+{
+body: commands
+}
 
 );
 
@@ -247,47 +267,43 @@ await client.channels.fetch(
 CHANNELS.TICKETS
 );
 
-const ticketMessages =
+const messages =
 await ticketChannel.messages.fetch({
-limit: 20
+limit: 10
 });
 
-const ticketExists =
-ticketMessages.find(
+const exists =
+messages.find(
 m =>
-m.author.id ===
-client.user.id
+m.author.id === client.user.id
 );
 
-if (!ticketExists) {
+if (!exists) {
 
-await ticketChannel.send({
-
-embeds: [
-
+const embed =
 new EmbedBuilder()
+
 .setColor("#1e2a38")
+
 .setTitle(
 "🎫 TICKETY SHOPIKA"
 )
-.setDescription(
-"Wybierz temat ticketu"
-)
 
-],
+.setDescription(`
+Wybierz rodzaj ticketu
+`);
 
-components: [
-
-new ActionRowBuilder()
-.addComponents(
-
+const menu =
 new StringSelectMenuBuilder()
+
 .setCustomId(
 "ticket_select"
 )
+
 .setPlaceholder(
 "Wybierz opcję"
 )
+
 .addOptions([
 
 {
@@ -305,7 +321,7 @@ label:
 value:
 "sell",
 emoji:
-"💸"
+"💵"
 },
 
 {
@@ -317,174 +333,17 @@ emoji:
 "🆘"
 }
 
-])
+]);
 
-)
-
-]
-
-});
-
-}
-
-const paymentChannel =
-await client.channels.fetch(
-CHANNELS.PAYMENTS
-);
-
-const paymentMessages =
-await paymentChannel.messages.fetch({
-limit: 20
-});
-
-const paymentExists =
-paymentMessages.find(
-m =>
-m.author.id ===
-client.user.id
-);
-
-if (!paymentExists) {
-
-await paymentChannel.send({
-
-embeds: [
-
-new EmbedBuilder()
-.setColor("#1e2a38")
-.setTitle(
-"💳 METODY PŁATNOŚCI"
-)
-.setDescription(`
-
-📲 BLIK ➜ 0%
-
-🔢 KOD BLIK ➜ 10%
-
-🧾 PSC ➜ 15%
-
-🅿️ PAYPAL ➜ 12%
-
-🔫 SKINS ➜ 40%
-
-`)
-
-]
-
-});
-
-}
-const clientPanel =
-await client.channels.fetch(
-CHANNELS.CLIENT_PANEL
-);
-
-const panelMessages =
-await clientPanel.messages.fetch({
-limit: 20
-});
-
-const panelExists =
-panelMessages.find(
-m =>
-m.author.id ===
-client.user.id
-);
-
-if (!panelExists) {
-
-await clientPanel.send({
-
-embeds: [
-
-new EmbedBuilder()
-.setColor("#1e2a38")
-.setTitle(
-"📊 PANEL KLIENTA"
-)
-.setDescription(
-"Kliknij przycisk poniżej"
-)
-
-],
-
-components: [
-
+const row =
 new ActionRowBuilder()
-.addComponents(
+.addComponents(menu);
 
-new ButtonBuilder()
-.setCustomId(
-"client_stats"
-)
-.setLabel(
-"SPRAWDŹ WYDATKI"
-)
-.setStyle(
-ButtonStyle.Primary
-)
+await ticketChannel.send({
 
-)
+embeds: [embed],
 
-]
-
-});
-
-}
-
-const dropChannel =
-await client.channels.fetch(
-CHANNELS.DROP
-);
-
-const dropMessages =
-await dropChannel.messages.fetch({
-limit: 20
-});
-
-const dropExists =
-dropMessages.find(
-m =>
-m.author.id ===
-client.user.id
-);
-
-if (!dropExists) {
-
-await dropChannel.send({
-
-embeds: [
-
-new EmbedBuilder()
-.setColor("#1e2a38")
-.setTitle(
-"🎁 DROP SHOPIKA"
-)
-.setDescription(
-"Kliknij przycisk aby losować"
-)
-
-],
-
-components: [
-
-new ActionRowBuilder()
-.addComponents(
-
-new ButtonBuilder()
-.setCustomId(
-"drop_button"
-)
-.setLabel(
-"LOSUJ DROP"
-)
-.setStyle(
-ButtonStyle.Success
-)
-
-)
-
-]
+components: [row]
 
 });
 
@@ -531,79 +390,122 @@ interaction.values[0];
 
 if (value === "buy") {
 
+const paymentMenu =
+new StringSelectMenuBuilder()
+
+.setCustomId(
+"payment_select"
+)
+
+.setPlaceholder(
+"Wybierz metodę płatności"
+)
+
+.addOptions([
+
+{
+label:
+"BLIK NA NR",
+value:
+"BLIK NA NR"
+},
+
+{
+label:
+"KOD BLIK",
+value:
+"KOD BLIK"
+},
+
+{
+label:
+"PSC Z PARAGONEM",
+value:
+"PSC Z PARAGONEM"
+},
+
+{
+label:
+"PSC BEZ PARAGONU",
+value:
+"PSC BEZ PARAGONU"
+},
+
+{
+label:
+"MYPSC",
+value:
+"MYPSC"
+},
+
+{
+label:
+"PAYPAL",
+value:
+"PAYPAL"
+},
+
+{
+label:
+"CS2 SKINS",
+value:
+"CS2 SKINS"
+}
+
+]);
+
+const row =
+new ActionRowBuilder()
+.addComponents(
+paymentMenu
+);
+
+return interaction.reply({
+
+content:
+"Wybierz metodę płatności",
+
+components: [row],
+
+ephemeral: true
+
+});
+
+}
+if (
+interaction.customId ===
+"payment_select"
+) {
+
+const payment =
+interaction.values[0];
+
 const modal =
 new ModalBuilder()
+
 .setCustomId(
-"buy_modal"
+`buy_${payment}`
 )
+
 .setTitle(
-"ZAKUP"
+"ZAKUP WALUTY"
 );
 
 const amount =
 new TextInputBuilder()
+
 .setCustomId(
 "buy_amount"
 )
+
 .setLabel(
-"Kwota zakupu"
+"Za ile kupujesz?"
 )
+
 .setStyle(
 TextInputStyle.Short
 )
-.setRequired(true);
 
-const payment =
-new TextInputBuilder()
-.setCustomId(
-"buy_payment"
-)
-.setLabel(
-"Metoda płatności"
-)
-.setStyle(
-TextInputStyle.Short
-)
-.setRequired(true);
-
-modal.addComponents(
-
-new ActionRowBuilder()
-.addComponents(amount),
-
-new ActionRowBuilder()
-.addComponents(payment)
-
-);
-
-return interaction.showModal(
-modal
-);
-
-}
-
-if (value === "sell") {
-
-const modal =
-new ModalBuilder()
-.setCustomId(
-"sell_modal"
-)
-.setTitle(
-"SKUP"
-);
-
-const amount =
-new TextInputBuilder()
-.setCustomId(
-"sell_amount"
-)
-.setLabel(
-"Ile sprzedajesz?"
-)
-.setStyle(
-TextInputStyle.Short
-)
 .setRequired(true);
 
 modal.addComponents(
@@ -620,31 +522,28 @@ modal
 }
 
 }
-}
-});
-client.on(
-Events.InteractionCreate,
-async interaction => {
 
 if (
-!interaction.isModalSubmit()
-) return;
-
-if (
-interaction.customId ===
-"buy_modal"
+interaction.isModalSubmit()
 ) {
 
+if (
+interaction.customId.startsWith(
+"buy_"
+)
+) {
+
+const payment =
+interaction.customId.replace(
+"buy_",
+""
+);
+
 const amount =
-parseInt(
+Number(
 interaction.fields.getTextInputValue(
 "buy_amount"
 )
-);
-
-const payment =
-interaction.fields.getTextInputValue(
-"buy_payment"
 );
 
 let categoryName =
@@ -682,7 +581,6 @@ pingRole =
 `<@&${ROLES.LIMIT200}>`;
 
 }
-
 const category =
 await getCategory(
 interaction.guild,
@@ -738,21 +636,28 @@ PermissionsBitField.Flags.ViewChannel
 
 });
 
-db.tickets[ticket.id] = {
-owner: interaction.user.id
+db.tickets[
+ticket.id
+] = {
+
+owner:
+interaction.user.id
+
 };
 
 saveDB();
+
 await ticket.send({
 
-content: pingRole,
+content:
+pingRole,
 
 embeds: [
 
 new EmbedBuilder()
 .setColor("Green")
 .setTitle(
-"NOWE ZAMÓWIENIE"
+"💸 NOWE ZAMÓWIENIE"
 )
 .setDescription(`
 
@@ -762,7 +667,7 @@ ${interaction.user}
 Kwota:
 ${amount} zł
 
-Metoda:
+Płatność:
 ${payment}
 
 `)
@@ -824,92 +729,101 @@ ephemeral: true
 
 }
 
-if (
-interaction.customId ===
-"sell_modal"
-) {
-
-const amount =
-interaction.fields.getTextInputValue(
-"sell_amount"
-);
-
-const category =
-await getCategory(
-interaction.guild,
-"SKUP"
-);
-
-const ticket =
-await interaction.guild.channels.create({
-
-name:
-`skup-${interaction.user.username}`,
-
-type:
-ChannelType.GuildText,
-
-parent:
-category.id,
-
-permissionOverwrites: [
-
-{
-id:
-interaction.guild.id,
-
-deny: [
-PermissionsBitField.Flags.ViewChannel
-]
-},
-
-{
-id:
-interaction.user.id,
-
-allow: [
-PermissionsBitField.Flags.ViewChannel,
-PermissionsBitField.Flags.SendMessages
-]
-},
-
-{
-id:
-ROLES.SKUP,
-
-allow: [
-PermissionsBitField.Flags.ViewChannel
-]
 }
 
-]
+});
+client.on(
+Events.InteractionCreate,
+async interaction => {
+
+if (
+!interaction.isChatInputCommand()
+) return;
+
+if (
+interaction.commandName ===
+"zapro"
+) {
+
+const invites =
+db.invites[
+interaction.user.id
+] || 0;
+
+return interaction.reply({
+
+content:
+`📨 Masz ${invites} zaproszeń`,
+
+ephemeral: true
 
 });
 
-db.tickets[ticket.id] = {
-owner: interaction.user.id
-};
+}
 
-saveDB();
-await ticket.send({
+if (
+interaction.commandName ===
+"konkurs"
+) {
+
+if (
+!interaction.member.roles.cache.has(
+ROLES.HELPER
+)
+) {
+
+return interaction.reply({
 
 content:
-`<@&${ROLES.SKUP}>`,
+"❌ Brak permisji",
+
+ephemeral: true
+
+});
+
+}
+
+const nagroda =
+interaction.options.getString(
+"nagroda"
+);
+
+const wygrani =
+interaction.options.getInteger(
+"wygrani"
+);
+
+const czas =
+interaction.options.getString(
+"czas"
+);
+
+const channel =
+await client.channels.fetch(
+CHANNELS.GIVEAWAYS
+);
+
+await channel.send({
 
 embeds: [
 
 new EmbedBuilder()
 .setColor("Green")
 .setTitle(
-"NOWY SKUP"
+"🎉 NOWY KONKURS"
 )
 .setDescription(`
 
-Użytkownik:
-${interaction.user}
+🎁 Nagroda:
+${nagroda}
 
-Kwota:
-${amount}
+🏆 Wygrani:
+${wygrani}
+
+⏰ Czas:
+${czas}
+
+Kliknij przycisk poniżej.
 
 `)
 
@@ -922,24 +836,13 @@ new ActionRowBuilder()
 
 new ButtonBuilder()
 .setCustomId(
-"claim_ticket"
+"join_giveaway"
 )
 .setLabel(
-"PRZEJMIJ"
+"DOŁĄCZ"
 )
 .setStyle(
 ButtonStyle.Success
-),
-
-new ButtonBuilder()
-.setCustomId(
-"close_ticket"
-)
-.setLabel(
-"ZAMKNIJ"
-)
-.setStyle(
-ButtonStyle.Danger
 )
 
 )
@@ -951,7 +854,7 @@ ButtonStyle.Danger
 return interaction.reply({
 
 content:
-`✅ Ticket utworzony ${ticket}`,
+"✅ Konkurs utworzony",
 
 ephemeral: true
 
@@ -970,14 +873,25 @@ if (
 
 if (
 interaction.customId ===
+"claim_ticket"
+) {
+
+return interaction.reply({
+
+content:
+`✅ Ticket przejęty przez ${interaction.user}`
+
+});
+
+}
+
+if (
+interaction.customId ===
 "send_legit"
 ) {
 
-const channel =
-interaction.channel;
-
 const topic =
-channel.topic.split("|");
+interaction.channel.topic.split("|");
 
 const buyerId =
 topic[0];
@@ -1013,7 +927,7 @@ ${interaction.user}
 Kwota:
 ${amount} zł
 
-Metoda:
+Płatność:
 ${payment}
 
 `)
@@ -1041,45 +955,7 @@ amount;
 db.users[buyerId].orders += 1;
 
 saveDB();
-
-const member =
-await interaction.guild.members.fetch(
-buyerId
-);
-
-await member.roles.add(
-ROLES.CLIENT
-).catch(() => {});
-
-if (
-db.users[buyerId].spent >= 200
-) {
-
-await member.roles.add(
-ROLES.CLIENT200
-).catch(() => {});
-
-}
-
-if (
-db.users[buyerId].spent >= 250
-) {
-
-await member.roles.add(
-ROLES.CLIENT250
-).catch(() => {});
-
-}
-
-if (
-db.users[buyerId].spent >= 500
-) {
-
-await member.roles.add(
-ROLES.CLIENT500
-).catch(() => {});
-
-}delete db.tickets[
+delete db.tickets[
 interaction.channel.id
 ];
 
@@ -1148,185 +1024,19 @@ currentChannel
 
 if (
 interaction.customId ===
-"client_stats"
+"join_giveaway"
 ) {
-
-const data =
-db.users[
-interaction.user.id
-];
-
-if (!data) {
 
 return interaction.reply({
 
 content:
-"❌ Brak zakupów",
+"🎉 Dołączyłeś do konkursu",
 
 ephemeral: true
 
 });
 
 }
-
-return interaction.reply({
-
-embeds: [
-
-new EmbedBuilder()
-.setColor("#1e2a38")
-.setTitle(
-"📊 PANEL KLIENTA"
-)
-.setDescription(`
-
-💸 Wydane:
-${data.spent} zł
-
-🛒 Zamówienia:
-${data.orders}
-
-`)
-
-],
-
-ephemeral: true
-
-});
-
-}
-if (
-interaction.customId ===
-"drop_button"
-) {
-
-const cooldown =
-db.cooldowns[
-interaction.user.id
-];
-
-if (
-cooldown &&
-Date.now() < cooldown
-) {
-
-const minutes =
-Math.floor(
-(cooldown - Date.now())
-/ 60000
-);
-
-return interaction.reply({
-
-content:
-`❌ Poczekaj ${minutes} minut`,
-
-ephemeral: true
-
-});
-
-}
-
-db.cooldowns[
-interaction.user.id
-] = Date.now() + 10800000;
-
-saveDB();
-
-const random =
-Math.random();
-
-let reward = null;
-
-if (random <= 0.0001) {
-
-reward =
-"100 TYSIĘCY";
-
-}
-
-else if (random <= 0.01) {
-
-reward =
-"BONUS 10%";
-
-}
-
-else if (random <= 0.02) {
-
-reward =
-"BONUS 5%";
-
-}
-
-if (!reward) {
-
-return interaction.reply({
-
-content:
-"❌ Nic nie wygrałeś",
-
-ephemeral: true
-
-});
-
-}
-
-return interaction.reply({
-
-content:
-`🎉 Wygrałeś ${reward}`,
-
-ephemeral: true
-
-});
-
-}
-
-});
-client.on(
-Events.GuildMemberAdd,
-async member => {
-
-if (
-!db.invites[
-member.user.id
-]
-) {
-
-db.invites[
-member.user.id
-] = 0;
-
-}
-
-saveDB();
-
-const welcomeChannel =
-await client.channels.fetch(
-CHANNELS.WELCOME
-);
-
-await welcomeChannel.send({
-
-embeds: [
-
-new EmbedBuilder()
-.setColor("#1e2a38")
-.setTitle(
-"👋 NOWY UŻYTKOWNIK"
-)
-.setDescription(`
-
-Witaj ${member}
-
-Miłego pobytu na shopie 🎉
-
-`)
-
-]
-
-});
 
 });
 
