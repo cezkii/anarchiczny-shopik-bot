@@ -234,7 +234,7 @@ new EmbedBuilder()
 .setDescription(`
 ${member}
 
-Cieszymy się że dołączasz 🥳
+Cieszymy się że dołączasz na naszego shopa 🥳
 `);
 
 await channel.send({
