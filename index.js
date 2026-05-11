@@ -637,6 +637,12 @@ content: pingRole,
 embeds: [embed],
 components: [buttons]
 });
+return interaction.reply({
+content: `✅ Ticket utworzony ${channel}`,
+ephemeral: true
+});
+
+}
 
 if (
 interaction.customId ===
@@ -1115,6 +1121,9 @@ content:
 `🎉 Wygrałeś ${reward}`,
 ephemeral: true
 });
+
+
+}
 
 
 }
