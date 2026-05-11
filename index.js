@@ -1,3 +1,4 @@
+
 const {
 Client,
 GatewayIntentBits,
@@ -59,20 +60,16 @@ cooldowns: {}
 };
 
 if (fs.existsSync("./database.json")) {
-
 db = JSON.parse(
 fs.readFileSync("./database.json")
 );
-
 }
 
 function saveDB() {
-
 fs.writeFileSync(
 "./database.json",
 JSON.stringify(db, null, 2)
 );
-
 }
 
 async function getCategory(guild, name) {
@@ -142,107 +139,7 @@ new ActionRowBuilder().addComponents(ticketMenu)
 ]
 });
 
-const paymentChannel =
-await client.channels.fetch(
-CHANNELS.PAYMENTS
-);
-
-const paymentEmbed =
-new EmbedBuilder()
-.setColor("#1e2a38")
-.setTitle("💳 METODY PŁATNOŚCI")
-.setDescription(`
-🧾 PSC Z PARAGONEM ➜ 15%
-🔐 PSC BEZ PARAGONU ➜ 20%
-🔐 MYPSC ➜ 25%
-📲 BLIK NA NR TEL ➜ 0%
-🔢 KOD BLIK ➜ 10%
-🔫 CS2 SKINS ➜ 40%
-🅿️ PAYPAL ➜ 12%
-`);
-
-await paymentChannel.send({
-embeds: [paymentEmbed]
 });
-
-const clientChannel =
-await client.channels.fetch(
-CHANNELS.CLIENT_PANEL
-);
-
-const clientEmbed =
-new EmbedBuilder()
-.setColor("#1e2a38")
-.setTitle("PANEL KLIENTA")
-.setDescription(
-"Kliknij przycisk poniżej aby sprawdzić wydatki"
-);
-
-const clientButton =
-new ButtonBuilder()
-.setCustomId("client_stats")
-.setLabel("SPRAWDŹ WYDATKI")
-.setStyle(ButtonStyle.Primary);
-
-await clientChannel.send({
-embeds: [clientEmbed],
-components: [
-new ActionRowBuilder().addComponents(clientButton)
-]
-});
-const dropChannel =
-await client.channels.fetch(
-CHANNELS.DROP
-);
-
-const dropEmbed =
-new EmbedBuilder()
-.setColor("#1e2a38")
-.setTitle("DROP SHOPIKA")
-.setDescription(
-"Kliknij przycisk poniżej aby losować nagrodę"
-);
-
-const dropButton =
-new ButtonBuilder()
-.setCustomId("drop_button")
-.setLabel("LOSUJ DROP")
-.setStyle(ButtonStyle.Success);
-
-await dropChannel.send({
-embeds: [dropEmbed],
-components: [
-new ActionRowBuilder().addComponents(dropButton)
-]
-});
-
-});
-
-client.on(
-Events.GuildMemberAdd,
-async member => {
-
-const channel =
-await client.channels.fetch(
-CHANNELS.WELCOME
-);
-
-const embed =
-new EmbedBuilder()
-.setColor("#1e2a38")
-.setTitle("WITAMY")
-.setDescription(`
-${member}
-
-Cieszymy się że dołączasz na naszego shopa 🥳
-`);
-
-await channel.send({
-embeds: [embed]
-});
-
-}
-);
 
 client.on(
 Events.InteractionCreate,
@@ -379,6 +276,7 @@ modal
 );
 
 }
+
 if (value === "other") {
 
 const modal =
@@ -549,47 +447,12 @@ ROLES.TICKET,
 allow: [
 PermissionsBitField.Flags.ViewChannel
 ]
-},
-
-{
-id:
-ROLES.NOLIMIT,
-
-allow: [
-PermissionsBitField.Flags.ViewChannel
-]
-},
-
-{
-id:
-ROLES.LIMIT50,
-
-allow: [
-PermissionsBitField.Flags.ViewChannel
-]
-},
-
-{
-id:
-ROLES.LIMIT100,
-
-allow: [
-PermissionsBitField.Flags.ViewChannel
-]
-},
-
-{
-id:
-ROLES.LIMIT200,
-
-allow: [
-PermissionsBitField.Flags.ViewChannel
-]
 }
 
 ]
 
 });
+
 db.tickets[channel.id] = {
 owner: interaction.user.id
 };
@@ -621,11 +484,6 @@ new ButtonBuilder()
 .setStyle(ButtonStyle.Success),
 
 new ButtonBuilder()
-.setCustomId("send_legit")
-.setLabel("WYSTAW LEGITKĘ")
-.setStyle(ButtonStyle.Success),
-
-new ButtonBuilder()
 .setCustomId("close_ticket")
 .setLabel("ZAMKNIJ")
 .setStyle(ButtonStyle.Danger)
@@ -637,9 +495,14 @@ content: pingRole,
 embeds: [embed],
 components: [buttons]
 });
+
 return interaction.reply({
-content: `✅ Ticket utworzony ${channel}`,
+
+content:
+`✅ Ticket utworzony ${channel}`,
+
 ephemeral: true
+
 });
 
 }
@@ -774,6 +637,7 @@ ephemeral: true
 });
 
 }
+
 if (
 interaction.customId ===
 "sell_modal"
@@ -787,7 +651,7 @@ ephemeral: true
 
 }
 
-
+}
 
 if (interaction.isButton()) {
 
@@ -799,7 +663,15 @@ interaction.customId ===
 const topic =
 interaction.channel.topic?.split("|");
 
-if (!topic) return;
+if (!topic) {
+
+return interaction.reply({
+content:
+"❌ Nie można przejąć tego ticketu",
+ephemeral: true
+});
+
+}
 
 const buyerId =
 topic[0];
@@ -851,142 +723,6 @@ content:
 `✅ Ticket przejął ${interaction.user}`
 });
 
-}
-
-if (
-interaction.customId ===
-"send_legit"
-) {
-
-const topic =
-interaction.channel.topic?.split("|");
-
-if (!topic) return;
-
-const buyerId =
-topic[0];
-
-const amount =
-Number(topic[1]);
-
-const payment =
-topic[2];
-
-const legitChannel =
-await client.channels.fetch(
-CHANNELS.LEGIT
-);
-
-const embed =
-new EmbedBuilder()
-.setColor("Green")
-.setTitle("NOWA TRANSAKCJA")
-.setDescription(`
-Kupujący:
-<@${buyerId}>
-
-Sprzedawca:
-${interaction.user}
-
-Kwota:
-${amount} zł
-
-Metoda:
-${payment}
-`)
-.setTimestamp();
-
-await legitChannel.send({
-embeds: [embed]
-});
-if (!db.users[buyerId]) {
-
-db.users[buyerId] = {
-spent: 0,
-orders: 0
-};
-
-}
-
-db.users[buyerId].spent += amount;
-db.users[buyerId].orders += 1;
-
-saveDB();
-
-const member =
-await interaction.guild.members.fetch(
-buyerId
-);
-
-await member.roles.add(
-ROLES.CLIENT
-).catch(() => {});
-
-if (
-db.users[buyerId].spent >= 250
-) {
-
-await member.roles.add(
-ROLES.CLIENT250
-).catch(() => {});
-
-}
-
-if (
-db.users[buyerId].spent >= 200
-) {
-
-await member.roles.add(
-ROLES.CLIENT200
-).catch(() => {});
-
-}
-
-if (
-db.users[buyerId].spent >= 500
-) {
-
-await member.roles.add(
-ROLES.CLIENT500
-).catch(() => {});
-
-}
-
-delete db.tickets[
-interaction.channel.id
-];
-
-saveDB();
-
-await interaction.reply({
-content:
-"✅ Legitka wystawiona"
-});
-
-setTimeout(async () => {
-
-const parent = interaction.channel.parent;
-
-await interaction.channel.delete()
-.catch(() => {});
-
-if (parent) {
-
-const channelsLeft =
-parent.children.cache.filter(
-c => c.id !== interaction.channel.id
-);
-
-if (channelsLeft.size === 0) {
-
-await parent.delete()
-.catch(() => {});
-
-}
-
-}
-
-}, 3000);
 }
 
 if (
@@ -1054,6 +790,7 @@ ephemeral: true
 
 }
 
+```js
 if (
 interaction.customId ===
 "drop_button"
@@ -1122,9 +859,9 @@ content:
 ephemeral: true
 });
 
-
 }
 
+}
 
 });
 
@@ -1133,3 +870,4 @@ await require("./commands")(client, TOKEN);
 })();
 
 client.login(TOKEN);
+
