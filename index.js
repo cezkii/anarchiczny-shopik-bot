@@ -1,4 +1,3 @@
-
 const {
 Client,
 GatewayIntentBits,
@@ -60,16 +59,20 @@ cooldowns: {}
 };
 
 if (fs.existsSync("./database.json")) {
+
 db = JSON.parse(
 fs.readFileSync("./database.json")
 );
+
 }
 
 function saveDB() {
+
 fs.writeFileSync(
 "./database.json",
 JSON.stringify(db, null, 2)
 );
+
 }
 
 async function getCategory(guild, name) {
@@ -98,7 +101,6 @@ return category;
 client.once("clientReady", async () => {
 
 console.log(`${client.user.tag} ONLINE`);
-
 const ticketChannel =
 await client.channels.fetch(
 CHANNELS.TICKETS
@@ -139,7 +141,107 @@ new ActionRowBuilder().addComponents(ticketMenu)
 ]
 });
 
+const paymentChannel =
+await client.channels.fetch(
+CHANNELS.PAYMENTS
+);
+
+const paymentEmbed =
+new EmbedBuilder()
+.setColor("#1e2a38")
+.setTitle("💳 METODY PŁATNOŚCI")
+.setDescription(`
+🧾 PSC Z PARAGONEM ➜ 15%
+🔐 PSC BEZ PARAGONU ➜ 20%
+🔐 MYPSC ➜ 25%
+📲 BLIK NA NR TEL ➜ 0%
+🔢 KOD BLIK ➜ 10%
+🔫 CS2 SKINS ➜ 40%
+🅿️ PAYPAL ➜ 12%
+`);
+
+await paymentChannel.send({
+embeds: [paymentEmbed]
 });
+
+const clientChannel =
+await client.channels.fetch(
+CHANNELS.CLIENT_PANEL
+);
+
+const clientEmbed =
+new EmbedBuilder()
+.setColor("#1e2a38")
+.setTitle("PANEL KLIENTA")
+.setDescription(
+"Kliknij przycisk poniżej aby sprawdzić wydatki"
+);
+
+const clientButton =
+new ButtonBuilder()
+.setCustomId("client_stats")
+.setLabel("SPRAWDŹ WYDATKI")
+.setStyle(ButtonStyle.Primary);
+
+await clientChannel.send({
+embeds: [clientEmbed],
+components: [
+new ActionRowBuilder().addComponents(clientButton)
+]
+});
+const dropChannel =
+await client.channels.fetch(
+CHANNELS.DROP
+);
+
+const dropEmbed =
+new EmbedBuilder()
+.setColor("#1e2a38")
+.setTitle("DROP SHOPIKA")
+.setDescription(
+"Kliknij przycisk poniżej aby losować nagrodę"
+);
+
+const dropButton =
+new ButtonBuilder()
+.setCustomId("drop_button")
+.setLabel("LOSUJ DROP")
+.setStyle(ButtonStyle.Success);
+
+await dropChannel.send({
+embeds: [dropEmbed],
+components: [
+new ActionRowBuilder().addComponents(dropButton)
+]
+});
+
+});
+
+client.on(
+Events.GuildMemberAdd,
+async member => {
+
+const channel =
+await client.channels.fetch(
+CHANNELS.WELCOME
+);
+
+const embed =
+new EmbedBuilder()
+.setColor("#1e2a38")
+.setTitle("WITAMY")
+.setDescription(`
+${member}
+
+Cieszymy się że dołączasz na naszego shopa 🥳
+`);
+
+await channel.send({
+embeds: [embed]
+});
+
+}
+);
 
 client.on(
 Events.InteractionCreate,
@@ -153,7 +255,6 @@ if (
 interaction.customId ===
 "ticket_select"
 ) {
-
 const already =
 Object.values(db.tickets)
 .find(
@@ -242,7 +343,6 @@ ephemeral: true
 }
 
 if (value === "sell") {
-
 const modal =
 new ModalBuilder()
 .setCustomId("sell_modal")
@@ -309,7 +409,6 @@ if (
 interaction.customId ===
 "payment_select"
 ) {
-
 const payment =
 interaction.values[0];
 
@@ -367,7 +466,6 @@ let categoryName =
 
 let pingRole =
 `<@&${ROLES.NOLIMIT}>`;
-
 if (amount <= 50) {
 
 categoryName =
@@ -452,7 +550,6 @@ PermissionsBitField.Flags.ViewChannel
 ]
 
 });
-
 db.tickets[channel.id] = {
 owner: interaction.user.id
 };
@@ -484,6 +581,11 @@ new ButtonBuilder()
 .setStyle(ButtonStyle.Success),
 
 new ButtonBuilder()
+.setCustomId("send_legit")
+.setLabel("WYSTAW LEGITKĘ")
+.setStyle(ButtonStyle.Success),
+
+new ButtonBuilder()
 .setCustomId("close_ticket")
 .setLabel("ZAMKNIJ")
 .setStyle(ButtonStyle.Danger)
@@ -511,7 +613,6 @@ if (
 interaction.customId ===
 "other_modal"
 ) {
-
 const reason =
 interaction.fields.getTextInputValue(
 "reason"
@@ -578,11 +679,8 @@ saveDB();
 
 const embed =
 new EmbedBuilder()
-
 .setColor("Blue")
-
 .setTitle("NOWA POMOC")
-
 .setDescription(`
 
 👤 Użytkownik:
@@ -592,26 +690,18 @@ ${interaction.user}
 ${reason}
 
 `);
-
 const buttons =
 new ActionRowBuilder()
-
 .addComponents(
 
 new ButtonBuilder()
-
 .setCustomId("claim_ticket")
-
 .setLabel("PRZEJMIJ")
-
 .setStyle(ButtonStyle.Success),
 
 new ButtonBuilder()
-
 .setCustomId("close_ticket")
-
 .setLabel("ZAMKNIJ")
-
 .setStyle(ButtonStyle.Danger)
 
 );
@@ -654,7 +744,6 @@ ephemeral: true
 }
 
 if (interaction.isButton()) {
-
 if (
 interaction.customId ===
 "claim_ticket"
@@ -663,15 +752,7 @@ interaction.customId ===
 const topic =
 interaction.channel.topic?.split("|");
 
-if (!topic) {
-
-return interaction.reply({
-content:
-"❌ Nie można przejąć tego ticketu",
-ephemeral: true
-});
-
-}
+if (!topic) return;
 
 const buyerId =
 topic[0];
@@ -725,6 +806,141 @@ content:
 
 }
 
+if (
+interaction.customId ===
+"send_legit"
+) {
+const topic =
+interaction.channel.topic?.split("|");
+
+if (!topic) return;
+
+const buyerId =
+topic[0];
+
+const amount =
+Number(topic[1]);
+
+const payment =
+topic[2];
+
+const legitChannel =
+await client.channels.fetch(
+CHANNELS.LEGIT
+);
+
+const embed =
+new EmbedBuilder()
+.setColor("Green")
+.setTitle("NOWA TRANSAKCJA")
+.setDescription(`
+Kupujący:
+<@${buyerId}>
+
+Sprzedawca:
+${interaction.user}
+
+Kwota:
+${amount} zł
+
+Metoda:
+${payment}
+`)
+.setTimestamp();
+
+await legitChannel.send({
+embeds: [embed]
+});
+
+if (!db.users[buyerId]) {
+
+db.users[buyerId] = {
+spent: 0,
+orders: 0
+};
+
+}
+
+db.users[buyerId].spent += amount;
+db.users[buyerId].orders += 1;
+
+saveDB();
+
+const member =
+await interaction.guild.members.fetch(
+buyerId
+);
+await member.roles.add(
+ROLES.CLIENT
+).catch(() => {});
+
+if (
+db.users[buyerId].spent >= 250
+) {
+
+await member.roles.add(
+ROLES.CLIENT250
+).catch(() => {});
+
+}
+
+if (
+db.users[buyerId].spent >= 200
+) {
+
+await member.roles.add(
+ROLES.CLIENT200
+).catch(() => {});
+
+}
+
+if (
+db.users[buyerId].spent >= 500
+) {
+
+await member.roles.add(
+ROLES.CLIENT500
+).catch(() => {});
+
+}
+
+delete db.tickets[
+interaction.channel.id
+];
+
+saveDB();
+
+await interaction.reply({
+content:
+"✅ Legitka wystawiona"
+});
+
+setTimeout(async () => {
+
+const parent = interaction.channel.parent;
+
+await interaction.channel.delete()
+.catch(() => {});
+
+if (parent) {
+
+const channelsLeft =
+parent.children.cache.filter(
+c => c.id !== interaction.channel.id
+);
+
+if (channelsLeft.size === 0) {
+
+await parent.delete()
+.catch(() => {});
+
+}
+
+}
+
+}, 3000);
+
+}
 if (
 interaction.customId ===
 "close_ticket"
@@ -789,8 +1005,6 @@ ephemeral: true
 });
 
 }
-
-```js
 if (
 interaction.customId ===
 "drop_button"
@@ -864,10 +1078,8 @@ ephemeral: true
 }
 
 });
-
 (async () => {
 await require("./commands")(client, TOKEN);
 })();
 
 client.login(TOKEN);
-
